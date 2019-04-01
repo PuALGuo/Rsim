@@ -55,11 +55,36 @@
 
 using namespace NVM;
 
-int main( int argc, char *argv[] )
+//int main( int argc, char *argv[] )
+int main()
 {
+	int argc;
+	char *argv[4];
+	
+	argc = 4 ;
+	argv[0] = (char*)"nvmain";
+	argv[1] = (char*)"Config/PCM_ISSCC_2012_4GB.config";
+	argv[2] = (char*)"Tests/Traces/hello_world.nvt";
+	argv[3] = (char*)"1000000";
+	
+	int start;
+	int result;
+	
+	std::cin >> start;
+	
     TraceMain *traceRunner = new TraceMain( );
 
-    return traceRunner->RunTrace( argc, argv );
+	if (start == 1) 
+	{
+		result = traceRunner->RunTrace( argc, argv );
+		std::cout << 1 << std::endl ;
+	}
+	else
+	{	
+		result = traceRunner->RunTrace( argc, argv );
+		std::cout << 0 << std::endl ;
+	}
+	return result;
 }
 
 TraceMain::TraceMain( )
@@ -88,20 +113,20 @@ int TraceMain::RunTrace( int argc, char *argv[] )
     uint64_t simulateCycles;
     uint64_t currentCycle;
     
-    if( argc < 4 )
-    {
-        std::cout << "Usage: nvmain CONFIG_FILE TRACE_FILE CYCLES [PARAM=value ...]" 
-            << std::endl;
-        return 1;
-    }
+    //if( argc < 4 )
+    //{
+    //    std::cout << "Usage: nvmain CONFIG_FILE TRACE_FILE CYCLES [PARAM=value ...]" 
+    //        << std::endl;
+    //    return 1;
+    //}
 
     /* Print out the command line that was provided. */
-    std::cout << "NVMain command line is:" << std::endl;
-    for( int curArg = 0; curArg < argc; ++curArg )
-    {
-        std::cout << argv[curArg] << " ";
-    }
-    std::cout << std::endl << std::endl;
+    //std::cout << "NVMain command line is:" << std::endl;
+    //for( int curArg = 0; curArg < argc; ++curArg )
+    //{
+    //    std::cout << argv[curArg] << " ";
+    //}
+    //std::cout << std::endl << std::endl;
 
     config->Read( argv[1] );
     config->SetSimInterface( simInterface );
@@ -122,7 +147,7 @@ int TraceMain::RunTrace( int argc, char *argv[] )
             clParam = clPair.substr( 0, clPair.find_first_of("="));
             clValue = clPair.substr( clPair.find_first_of("=") + 1, std::string::npos );
 
-            std::cout << "Overriding " << clParam << " with '" << clValue << "'" << std::endl;
+            //std::cout << "Overriding " << clParam << " with '" << clValue << "'" << std::endl;
 
             config->SetValue( clParam, clValue );
         }
@@ -144,7 +169,7 @@ int TraceMain::RunTrace( int argc, char *argv[] )
 
     for( size_t i = 0; i < hookList.size( ); i++ )
     {
-        std::cout << "Creating hook " << hookList[i] << std::endl;
+        //std::cout << "Creating hook " << hookList[i] << std::endl;
 
         NVMObject *hook = HookFactory::CreateHook( hookList[i] );
         
@@ -156,8 +181,8 @@ int TraceMain::RunTrace( int argc, char *argv[] )
         }
         else
         {
-            std::cout << "Warning: Could not create a hook named `" 
-                << hookList[i] << "'." << std::endl;
+            //std::cout << "Warning: Could not create a hook named `" 
+            //    << hookList[i] << "'." << std::endl;
         }
     }
 
@@ -170,8 +195,8 @@ int TraceMain::RunTrace( int argc, char *argv[] )
     simInterface->SetConfig( config, true );
     nvmain->SetConfig( config, "defaultMemory", true );
 
-    std::cout << "traceMain (" << (void*)(this) << ")" << std::endl;
-    nvmain->PrintHierarchy( );
+    //std::cout << "traceMain (" << (void*)(this) << ")" << std::endl;
+    //nvmain->PrintHierarchy( );
 
     if( config->KeyExists( "TraceReader" ) )
         trace = TraceReaderFactory::CreateNewTraceReader( 
@@ -186,7 +211,7 @@ int TraceMain::RunTrace( int argc, char *argv[] )
     else
         simulateCycles = atoi( argv[3] );
 
-    std::cout << "*** Simulating " << simulateCycles << " input cycles. (";
+    //std::cout << "*** Simulating " << simulateCycles << " input cycles. (";
 
     /*
      *  The trace cycle is assumed to be the rate that the CPU/LLC is issuing. 
@@ -195,7 +220,7 @@ int TraceMain::RunTrace( int argc, char *argv[] )
     simulateCycles = (uint64_t)ceil( ((double)(config->GetValue( "CPUFreq" )) 
                     / (double)(config->GetValue( "CLK" ))) * simulateCycles ); 
 
-    std::cout << simulateCycles << " memory cycles) ***" << std::endl;
+    //std::cout << simulateCycles << " memory cycles) ***" << std::endl;
 
     currentCycle = 0;
     while( currentCycle <= simulateCycles || simulateCycles == 0 )
@@ -205,8 +230,8 @@ int TraceMain::RunTrace( int argc, char *argv[] )
             /* Force all modules to drain requests. */
             bool draining = Drain( );
 
-            std::cout << "Could not read next line from trace file!" 
-                << std::endl;
+            //std::cout << "Could not read next line from trace file!" 
+            //    << std::endl;
 
             /* Wait for requests to drain. */
             while( outstandingRequests > 0 )
@@ -243,9 +268,9 @@ int TraceMain::RunTrace( int argc, char *argv[] )
             tl->SetLine( tl->GetAddress( ), tl->GetOperation( ), 0, 
                          tl->GetData( ), tl->GetOldData( ), tl->GetThreadId( ) );
 
-        if( request->type != READ && request->type != WRITE )
-            std::cout << "traceMain: Unknown Operation: " << request->type 
-                << std::endl;
+        //if( request->type != READ && request->type != WRITE )
+            //std::cout << "traceMain: Unknown Operation: " << request->type 
+            //    << std::endl;
 
         /* 
          * If the next operation occurs after the requested number of cycles,
@@ -297,14 +322,14 @@ int TraceMain::RunTrace( int argc, char *argv[] )
     }       
 
     GetChild( )->CalculateStats( );
-    std::ostream& refStream = (statStream.is_open()) ? statStream : std::cout;
-    stats->PrintAll( refStream );
+    //std::ostream& refStream = (statStream.is_open()) ? statStream : std::cout;
+    //stats->PrintAll( refStream );
 
-    std::cout << "Exiting at cycle " << currentCycle << " because simCycles " 
-        << simulateCycles << " reached." << std::endl; 
+    //std::cout << "Exiting at cycle " << currentCycle << " because simCycles " 
+    //	<< simulateCycles << " reached." << std::endl; 
     if( outstandingRequests > 0 )
-        std::cout << "Note: " << outstandingRequests << " requests still in-flight."
-                  << std::endl;
+        //std::cout << "Note: " << outstandingRequests << " requests still in-flight."
+        //          << std::endl;
 
     delete config;
     delete stats;

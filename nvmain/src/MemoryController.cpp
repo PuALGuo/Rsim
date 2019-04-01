@@ -408,7 +408,7 @@ void MemoryController::SetConfig( Config *conf, bool createChildren )
      *  number of devices = bus width / device width
      *  Total channel size is: loglcal bank size * BANKS * RANKS
      */
-    std::cout << StatName( ) << " capacity is " << ((p->ROWS * p->COLS * p->tBURST * p->RATE * p->BusWidth * p->BANKS * p->RANKS) / (8*1024*1024)) << " MB." << std::endl;
+    //std::cout << StatName( ) << " capacity is " << ((p->ROWS * p->COLS * p->tBURST * p->RATE * p->BusWidth * p->BANKS * p->RANKS) / (8*1024*1024)) << " MB." << std::endl;
 
     if( conf->KeyExists( "MATHeight" ) )
     {
@@ -442,7 +442,7 @@ void MemoryController::SetConfig( Config *conf, bool createChildren )
         /* Add your custom types here. */
     }
 
-    std::cout << "Creating " << commandQueueCount << " command queues." << std::endl;
+    //std::cout << "Creating " << commandQueueCount << " command queues." << std::endl;
     
     commandQueues = new std::deque<NVMainRequest *> [commandQueueCount];
     activateQueued = new bool * [p->RANKS];

@@ -140,8 +140,8 @@ void StandardRank::SetConfig( Config *c, bool createChildren )
         rankAT->SetConfig( c, createChildren );
         SetDecoder( rankAT );
 
-        std::cout << "Creating " << bankCount << " banks in all " 
-            << deviceCount << " devices.\n";
+        //std::cout << "Creating " << bankCount << " banks in all " 
+        //    << deviceCount << " devices.\n";
 
         for( ncounter_t i = 0; i < bankCount; i++ )
         {

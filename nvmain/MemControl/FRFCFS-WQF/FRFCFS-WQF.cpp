@@ -48,8 +48,8 @@ using namespace NVM;
  */
 FRFCFS_WQF::FRFCFS_WQF( ) : readQueueId(0), writeQueueId(1)
 {
-    std::cout << "Created a First Ready First Come First Serve memory \
-        controller with write queue!" << std::endl;
+    //std::cout << "Created a First Ready First Come First Serve memory \n
+    //    controller with write queue!" << std::endl;
 
     InitQueues( 2 );
 
