@@ -776,6 +776,208 @@ bool SubArray::LoadWeight( NVMainRequest *request )
     return true;
     
 }
+
+bool SubArray::ReadCycle( NVMainRequest *request)
+{
+    std::cout << "rec readcycle command in bank*****" << std::endl;
+    uint64_t readRow;
+
+    request->address.GetTranslatedAddress( &readRow, NULL, NULL, NULL, NULL, NULL );
+
+    /* Check if we need to cancel or pause a write to service this request. */
+    CheckWritePausing( );
+
+    /* TODO: Can we remove this sanity check and totally trust IsIssuable()? */
+    /* sanity check */
+    if( nextRead > GetEventQueue()->GetCurrentCycle() )
+    {
+        std::cerr << "NVMain Error: Subarray violates READ timing constraint!"
+            << std::endl;
+        return false;
+    }
+    else if( state != SUBARRAY_OPEN )
+    {
+        std::cerr << "NVMain Error: try to read a subarray that is not active!"
+            << std::endl;
+        return false;
+    }
+    else if( readRow != openRow )
+    {
+        std::cerr << "NVMain Error: try to read a row that is not opened in a subarray!"
+            << std::endl;
+        return false;
+    }
+
+    /* Any additional latency for data encoding. */
+    ncycles_t decLat = (dataEncoder ? dataEncoder->Read( request ) : 0);
+
+    /* Update timing constraints */
+    if( request->type == LOAD_WEIGHT )
+    {
+        nextPrecharge = MAX( nextPrecharge, 
+                             GetEventQueue()->GetCurrentCycle() 
+                                 + MAX( p->tBURST, p->tCCD ) * (request->burstCount - 1)
+                                 + p->tAL + p->tBURST + p->tRTP - p->tCCD + decLat );
+
+        nextRead = MAX( nextRead, 
+                        GetEventQueue()->GetCurrentCycle() 
+                            + MAX( p->tBURST, p->tCCD ) * request->burstCount );
+
+        nextWrite = MAX( nextWrite, 
+                         GetEventQueue()->GetCurrentCycle() 
+                             + MAX( p->tBURST, p->tCCD ) * (request->burstCount  - 1)
+                             + p->tCAS + p->tBURST + p->tRTRS - p->tCWD + decLat );
+    }
+
+    /* Read->Powerdown is typical the same for READ and READ_PRECHARGE. */
+    nextPowerDown = MAX( nextPowerDown,
+                         GetEventQueue()->GetCurrentCycle()
+                            + MAX( p->tBURST, p->tCCD ) * (request->burstCount  - 1)
+                            + p->tCAS + p->tAL + p->tBURST + 1 + decLat );
+
+    //dataCycles += p->tBURST;
+    //request->type =READ;
+    GetEventQueue( )->InsertEvent( EventResponse, this, request, 
+            GetEventQueue()->GetCurrentCycle() + p->tCAS + p->tBURST + decLat );
+    
+    std::cout << "rec readcycle command in bank(complete)*****" << std::endl;
+    return true;
+  
+}
+
+bool SubArray::RealCompute( NVMainRequest *request)
+{
+    std::cout << "rec realcompute command in bank*****" << std::endl;
+
+    nextPrecharge = MAX( nextPrecharge, 
+                         GetEventQueue()->GetCurrentCycle() 
+                             + MAX( p->tBURST, p->tCCD ) * (request->burstCount - 1)
+                             + p->tAL + p->tBURST + p->tRTP - p->tCCD );
+
+    nextRead = MAX( nextRead, 
+                    GetEventQueue()->GetCurrentCycle() 
+                        + MAX( p->tBURST, p->tCCD ) * request->burstCount );
+
+    nextWrite = MAX( nextWrite, 
+                     GetEventQueue()->GetCurrentCycle() 
+                         + MAX( p->tBURST, p->tCCD ) * (request->burstCount  - 1)
+                         + p->tCAS + p->tBURST + p->tRTRS - p->tCWD );
+
+    /* Read->Powerdown is typical the same for READ and READ_PRECHARGE. */
+    nextPowerDown = MAX( nextPowerDown,
+                         GetEventQueue()->GetCurrentCycle()
+                            + MAX( p->tBURST, p->tCCD ) * (request->burstCount  - 1)
+                            + p->tCAS + p->tAL + p->tBURST + 1 );
+
+    //dataCycles += p->tBURST;
+    //request->type =READ;
+    GetEventQueue( )->InsertEvent( EventResponse, this, request, 
+            GetEventQueue()->GetCurrentCycle() + p->tCAS + p->tBURST );
+    
+    std::cout << "rec realcompute command in bank(complete)*****" << std::endl;
+    return true;    
+}
+
+bool SubArray::PostRead( NVMainRequest *request)
+{
+    std::cout << "rec postread command in bank*****" << std::endl;
+
+    nextPrecharge = MAX( nextPrecharge, 
+                         GetEventQueue()->GetCurrentCycle() 
+                             + MAX( p->tBURST, p->tCCD ) * 128
+                             + p->tAL + p->tBURST + p->tRTP - p->tCCD );
+
+    nextRead = MAX( nextRead, 
+                    GetEventQueue()->GetCurrentCycle() 
+                        + MAX( p->tBURST, p->tCCD ) * 128 );
+
+    nextWrite = MAX( nextWrite, 
+                     GetEventQueue()->GetCurrentCycle() 
+                         + MAX( p->tBURST, p->tCCD ) * 128
+                         + p->tCAS + p->tBURST + p->tRTRS - p->tCWD );
+
+    /* Read->Powerdown is typical the same for READ and READ_PRECHARGE. */
+    nextPowerDown = MAX( nextPowerDown,
+                         GetEventQueue()->GetCurrentCycle()
+                            + MAX( p->tBURST, p->tCCD ) * 128
+                            + p->tCAS + p->tAL + p->tBURST + 1);
+
+    //dataCycles += p->tBURST;
+    //request->type =READ;
+    GetEventQueue( )->InsertEvent( EventResponse, this, request, 
+            GetEventQueue()->GetCurrentCycle() + p->tCAS + p->tBURST*128);
+    
+    std::cout << "rec postread command in bank(complete)*****" << std::endl;
+    return true; 
+}
+
+bool SubArray::WriteCycle( NVMainRequest *request)
+{
+    std::cout << "rec writecycle command in bank*****" << std::endl;
+    uint64_t readRow;
+
+    request->address.GetTranslatedAddress( &readRow, NULL, NULL, NULL, NULL, NULL );
+
+    /* Check if we need to cancel or pause a write to service this request. */
+    CheckWritePausing( );
+
+    /* TODO: Can we remove this sanity check and totally trust IsIssuable()? */
+    /* sanity check */
+    if( nextRead > GetEventQueue()->GetCurrentCycle() )
+    {
+        std::cerr << "NVMain Error: Subarray violates READ timing constraint!"
+            << std::endl;
+        return false;
+    }
+    else if( state != SUBARRAY_OPEN )
+    {
+        std::cerr << "NVMain Error: try to read a subarray that is not active!"
+            << std::endl;
+        return false;
+    }
+    else if( readRow != openRow )
+    {
+        std::cerr << "NVMain Error: try to read a row that is not opened in a subarray!"
+            << std::endl;
+        return false;
+    }
+
+    /* Any additional latency for data encoding. */
+    ncycles_t decLat = (dataEncoder ? dataEncoder->Read( request ) : 0);
+
+    /* Update timing constraints */
+    if( request->type == LOAD_WEIGHT )
+    {
+        nextPrecharge = MAX( nextPrecharge, 
+                             GetEventQueue()->GetCurrentCycle() 
+                                 + MAX( p->tBURST, p->tCCD ) * (request->burstCount - 1)
+                                 + p->tAL + p->tBURST + p->tRTP - p->tCCD + decLat );
+
+        nextRead = MAX( nextRead, 
+                        GetEventQueue()->GetCurrentCycle() 
+                            + MAX( p->tBURST, p->tCCD ) * request->burstCount );
+
+        nextWrite = MAX( nextWrite, 
+                         GetEventQueue()->GetCurrentCycle() 
+                             + MAX( p->tBURST, p->tCCD ) * (request->burstCount  - 1)
+                             + p->tCAS + p->tBURST + p->tRTRS - p->tCWD + decLat );
+    }
+
+    /* Read->Powerdown is typical the same for READ and READ_PRECHARGE. */
+    nextPowerDown = MAX( nextPowerDown,
+                         GetEventQueue()->GetCurrentCycle()
+                            + MAX( p->tBURST, p->tCCD ) * (request->burstCount  - 1)
+                            + p->tCAS + p->tAL + p->tBURST + 1 + decLat );
+
+    //dataCycles += p->tBURST;
+    //request->type =READ;
+    GetEventQueue( )->InsertEvent( EventResponse, this, request, 
+            GetEventQueue()->GetCurrentCycle() + p->tCAS + p->tBURST + decLat );
+    
+    std::cout << "rec writecycle command in bank(complete)*****" << std::endl;
+    return true;  
+}
+
 /*
  * Precharge() close a row and force the bank back to SUBARRAY_CLOSED
  */
@@ -1171,7 +1373,9 @@ ncycle_t SubArray::NextIssuable( NVMainRequest *request )
     else if( request->type == WRITE ) nextCompare = nextWrite;
     else if( request->type == PRECHARGE ) nextCompare = nextPrecharge;
     else if( request->type == LOAD_WEIGHT ) nextCompare = MAX(nextRead, nextWrite);
-        
+    else if( request->type == READCYCLE || request->type == REALCOMPUTE || request->type == POSTREAD || request->type == WRITECYCLE || request->type == COMPUTE ) nextCompare = MAX( nextRead, nextWrite );
+    else assert(false);
+
     // Should have no children
     return nextCompare;
 }
@@ -1253,6 +1457,46 @@ bool SubArray::IsIssuable( NVMainRequest *req, FailReason *reason )
             if( reason ) 
                 reason->reason = SUBARRAY_TIMING;
         }
+    }
+    else if( req->type == READCYCLE )
+    {
+        if( nextRead > (GetEventQueue()->GetCurrentCycle()) /* if it is too early to read */
+            || state != SUBARRAY_OPEN  /* or, the subarray is not active */
+            || opRow != openRow        /* or, the target row is not the open row */
+            || ( p->WritePausing && isWriting && writeRequest->flags & NVMainRequest::FLAG_FORCED ) ) /* or, write can't be paused. */
+        {
+            rv = false;
+            if( reason ) 
+                reason->reason = SUBARRAY_TIMING;
+        }
+        else if( nextWrite > (GetEventQueue()->GetCurrentCycle()) /* if it is too early to write */
+                || state != SUBARRAY_OPEN  /* or, the subarray is not active */          
+                || opRow != openRow )      /* or, the target row is not the open row */
+        {
+            rv = false;
+            if( reason ) 
+                reason->reason = SUBARRAY_TIMING;
+        }
+    }
+    else if ( req->type == REALCOMPUTE ) 
+    {
+        std::cout << "something wrong in the sub " << std::endl;
+        rv = false ;
+    }
+    else if ( req->type == POSTREAD )
+    {
+        std::cout << "something wrong in the sub " << std::endl;
+        rv = false ;
+    }
+    else if ( req->type == WRITECYCLE )
+    {
+        std::cout << "something wrong in the sub " << std::endl;
+        rv = false ;
+    }
+    else if ( req->type == COMPUTE )
+    {
+        std::cout << "something wrong in the sub " << std::endl;
+        rv = false ;
     }
     else if( req->type == PRECHARGE || req->type == PRECHARGE_ALL )
     {
@@ -1339,6 +1583,18 @@ bool SubArray::IssueCommand( NVMainRequest *req )
             
             case LOAD_WEIGHT:
                 rv = this->LoadWeight( req );
+                break;
+            case READCYCLE:
+                rv = this->ReadCycle( req );
+                break;
+            case REALCOMPUTE:
+                rv = this->RealCompute( req );
+                break;
+            case POSTREAD:
+                rv = this->PostRead( req );
+                break;
+            case WRITECYCLE:
+                rv = this->WriteCycle( req );
                 break;
             
             case PRECHARGE:

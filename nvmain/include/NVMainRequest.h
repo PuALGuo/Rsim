@@ -65,7 +65,11 @@ enum OpType
     LOAD_WEIGHT,     /* Load for weight */ 
     //READ_FOR_LOAD,
     //WRITE_FOR_LOAD
-    COMPUTE
+    COMPUTE,
+    READCYCLE,
+    REALCOMPUTE,
+    POSTREAD,
+    WRITECYCLE
 };
 
 enum MemRequestStatus 

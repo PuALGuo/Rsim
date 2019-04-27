@@ -178,6 +178,11 @@ class MemoryController : public NVMObject
     NVMainRequest *MakePowerdownRequest( OpType pdOp,
                                          const ncounter_t rank );
     NVMainRequest *MakePowerupRequest( const ncounter_t rank );
+    /* This is for the memory compute */
+    NVMainRequest *MakeReadCycleRequest( NVMainRequest *triggerRequest );
+    NVMainRequest *MakeRealComputeRequest( NVMainRequest *triggerRequest );
+    NVMainRequest *MakePostReadRequest( NVMainRequest *triggerRequest );
+    NVMainRequest *MakeWriteCycleRequest( NVMainRequest *triggerRequest );
 
     bool FindStarvedRequest( std::list<NVMainRequest *>& transactionQueue, NVMainRequest **starvedRequest );
     bool FindCachedAddress( std::list<NVMainRequest *>& transactionQueue, NVMainRequest **accessibleRequest );

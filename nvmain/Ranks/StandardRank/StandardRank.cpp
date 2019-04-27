@@ -535,6 +535,156 @@ bool StandardRank::LoadWeight( NVMainRequest *request )
     std::cout << "rec Load command in rank(complete)*****" << std::endl;
     return success;                 
 }
+
+bool StandardRank::ReadCycle( NVMainRequest *request )
+{
+    uint64_t readBank;
+    std::cout << "rec readcycle command in rank*****" << std::endl;
+    compute_flag = true;
+    //addrgen.init();
+
+    request->address.GetTranslatedAddress( NULL, NULL, &readBank, NULL, NULL, NULL );
+
+    if( readBank >= bankCount )
+    {
+        std::cerr << "NVMain Error: Rank attempted to read non-existant bank: " 
+            << readBank << "!" << std::endl;
+        return false;
+    }
+
+    if( nextRead > GetEventQueue()->GetCurrentCycle() )
+    {
+        std::cerr << "NVMain Error: Rank Read violates the timing constraint: " 
+            << readBank << "!" << std::endl;
+        return false;
+    }
+
+    bool success = GetChild( request )->IssueCommand( request );
+
+    nextRead = MAX( nextRead, 
+                    GetEventQueue()->GetCurrentCycle() 
+                    + MAX( p->tBURST, p->tCCD ) * (request->burstCount - 1)
+                    + p->tCWD + p->tBURST + p->tWTR );
+
+    nextWrite = MAX( nextWrite, 
+                     GetEventQueue()->GetCurrentCycle() 
+                     + MAX( p->tBURST, p->tCCD ) * request->burstCount );
+    
+    if( success == false )
+    {
+        std::cerr << "NVMain Error: Rank Write FAILED! Did you check IsIssuable?" 
+            << std::endl;
+    }
+    std::cout << "rec readcycle command in rank(complete)*****" << std::endl;
+    return success;    
+}
+
+bool StandardRank::RealCompute( NVMainRequest *request )
+{
+    std::cout << "rec realcompute command in rank*****" << std::endl;
+
+    bool success = GetChild( request )->IssueCommand( request );
+
+    nextRead = MAX( nextRead, 
+                    GetEventQueue()->GetCurrentCycle() 
+                    + MAX( p->tBURST, p->tCCD ) * (request->burstCount - 1)
+                    + p->tCWD + p->tBURST + p->tWTR );
+
+    nextWrite = MAX( nextWrite, 
+                     GetEventQueue()->GetCurrentCycle() 
+                     + MAX( p->tBURST, p->tCCD ) * request->burstCount );
+    
+    if( success == false )
+    {
+        std::cerr << "NVMain Error: Rank Write FAILED! Did you check IsIssuable?" 
+            << std::endl;
+    }
+    std::cout << "rec realcompute command in rank(complete)*****" << std::endl;
+    return success;    
+}
+
+bool StandardRank::PostRead( NVMainRequest *request )
+{
+    std::cout << "rec postread command in rank*****" << std::endl;
+
+    bool success = GetChild( request )->IssueCommand( request );
+
+    nextRead = MAX( nextRead, 
+                    GetEventQueue()->GetCurrentCycle() 
+                    + MAX( p->tBURST, p->tCCD ) * (request->burstCount - 1)
+                    + p->tCWD + p->tBURST + p->tWTR );
+
+    nextWrite = MAX( nextWrite, 
+                     GetEventQueue()->GetCurrentCycle() 
+                     + MAX( p->tBURST, p->tCCD ) * request->burstCount );
+    
+    if( success == false )
+    {
+        std::cerr << "NVMain Error: Rank Write FAILED! Did you check IsIssuable?" 
+            << std::endl;
+    }
+    std::cout << "rec postread command in rank(complete)*****" << std::endl;
+    return success;    
+}
+
+bool StandardRank::WriteCycle( NVMainRequest *request )
+{
+    uint64_t writeBank;
+    std::cout << "rec readcycle command in rank*****" << std::endl;
+    //addrgen.init();
+
+    request->address.GetTranslatedAddress( NULL, NULL, &writeBank, NULL, NULL, NULL );
+
+    if( writeBank >= bankCount )
+    {
+        std::cerr << "NVMain Error: Rank attempted to read non-existant bank: " 
+            << writeBank << "!" << std::endl;
+        return false;
+    }
+
+    if( nextWrite > GetEventQueue()->GetCurrentCycle() )
+    {
+        std::cerr << "NVMain Error: Rank Read violates the timing constraint: " 
+            << writeBank << "!" << std::endl;
+        return false;
+    }
+
+    bool success = GetChild( request )->IssueCommand( request );
+
+    nextRead = MAX( nextRead, 
+                    GetEventQueue()->GetCurrentCycle() 
+                    + MAX( p->tBURST, p->tCCD ) * (request->burstCount - 1)
+                    + p->tCWD + p->tBURST + p->tWTR );
+
+    nextWrite = MAX( nextWrite, 
+                     GetEventQueue()->GetCurrentCycle() 
+                     + MAX( p->tBURST, p->tCCD ) * request->burstCount );
+    
+    if( success == false )
+    {
+        std::cerr << "NVMain Error: Rank Write FAILED! Did you check IsIssuable?" 
+            << std::endl;
+    }
+    std::cout << "rec readcycle command in rank(complete)*****" << std::endl;
+    return success;   
+}
+
+bool StandardRank::Compute( NVMainRequest *request )
+{
+    std::cout << "rec readcycle command in rank*****" << std::endl;
+
+    compute_flag = false;
+    readcycle_flag = false;
+    realcompute_flag = false;
+    postread_flag = false;
+    writecycle_flag = false;
+
+    GetEventQueue( )->InsertEvent( EventResponse, this, request, GetEventQueue()->GetCurrentCycle() + 1 );
+    std::cout << "rec readcycle command in rank*****" << std::endl;
+
+    return true;
+}
+
 bool StandardRank::Precharge( NVMainRequest *request )
 {
     uint64_t preBank;
@@ -752,6 +902,7 @@ ncycle_t StandardRank::NextIssuable( NVMainRequest *request )
     else if( request->type == WRITE || request->type == WRITE_PRECHARGE ) nextCompare = nextWrite;
     else if( request->type == PRECHARGE || request->type == PRECHARGE_ALL ) nextCompare = nextPrecharge;
     else if( request->type == LOAD_WEIGHT ) nextCompare = MAX( nextRead, nextWrite );
+    else if(request->type == READCYCLE || request->type == REALCOMPUTE || request->type == POSTREAD || request->type == WRITECYCLE || request->type == COMPUTE ) nextCompare = MAX( nextRead, nextWrite );
     else assert(false);
         
     return MAX(GetChild( request )->NextIssuable( request ), nextCompare );
@@ -919,6 +1070,106 @@ bool StandardRank::IsIssuable( NVMainRequest *req, FailReason *reason )
             rv = GetChild( req )->IsIssuable( req, reason );
         }
     }
+    else if ( req->type == READCYCLE )
+    {
+        if( nextRead > GetEventQueue( )->GetCurrentCycle( ) )
+        {
+            rv = false;
+            std::cout << "*********read forbidding*******" << std::endl;
+            if ( reason )
+                reason->reason = RANK_TIMING;
+        }
+        else if ( nextWrite > GetEventQueue( )->GetCurrentCycle( ) )
+        {
+            rv = false;
+            std::cout << "********write forbidding******"  << std::endl;
+            if ( reason )
+                reason->reason = RANK_TIMING;
+        }
+        else if ( compute_flag )
+        {
+            rv = false;
+            std::cout << "compute command is flying ******" << std::endl;
+            if ( reason )
+                reason->reason = RANK_TIMING;
+        }
+        else
+        {
+            //std::cout << "im hereeeeee" << std::endl;
+            //std::cout << "test global params " << globalparams.K_Col << std::endl;
+            rv = GetChild( req )->IsIssuable( req, reason );
+        }
+    }
+    else if ( req->type == REALCOMPUTE ) 
+    {
+        if ( readcycle_flag )
+        {
+            //rv = GetChild( req )->IsIssuable( req, reason );
+            rv = true;
+        }
+        else
+        {
+            rv = false;
+            std::cout << "readcycle is not completed*****" << std::endl;
+            if( reason )
+                reason->reason = RANK_TIMING;
+        }
+    }
+    else if ( req->type == POSTREAD )
+    {
+        if( !realcompute_flag )
+        {
+            rv = false;
+            std::cout << "readcycle is not completed*****" << std::endl;
+            if( reason )
+                reason->reason = RANK_TIMING;
+        } 
+        else if ( !readcycle_flag )
+        {
+            std::cout << "something wrong******" << std::endl;
+        }
+        else 
+        {
+            //rv = GetChild( req )->IsIssuable( req, reason );
+            rv = true;
+        }
+    }
+    else if ( req->type == WRITECYCLE )
+    {
+        if( !postread_flag )
+        {
+            rv = false;
+            std::cout << "postread is not completed*****" << std::endl;
+            if( reason )
+                reason->reason = RANK_TIMING;
+        }
+        else if( !readcycle_flag || !realcompute_flag )
+        {
+            std::cout << "something wrong******" << std::endl;
+        }
+        else
+        {
+            rv = true;
+        }
+    }
+    else if ( req->type == COMPUTE )
+    {
+        if( !writecycle_flag )
+        {
+            rv = false;
+            std::cout << "postread is not completed*****" << std::endl;
+            if( reason )
+                reason->reason = RANK_TIMING;
+        }
+        else if( !readcycle_flag || !realcompute_flag || !postread_flag )
+        {
+            std::cout << "something wrong******" << std::endl;
+        }
+        else
+        {
+            rv = true;
+        }
+    }
     else
     {
         /* Unknown command -- See if child module can handle it. */
@@ -982,6 +1233,26 @@ bool StandardRank::IssueCommand( NVMainRequest *req )
             case LOAD_WEIGHT:
                 rv = this->LoadWeight( req );
                 break;
+            
+            case READCYCLE:
+                rv = this->ReadCycle( req );
+                break;
+            
+            case REALCOMPUTE:
+                rv = this->RealCompute( req );
+                break;
+            
+            case POSTREAD:
+                rv = this->PostRead( req );
+                break;
+            
+            case WRITECYCLE:
+                rv = this->WriteCycle( req );
+                break;
+            
+            case COMPUTE:
+                rv = this->Compute( req );
+                break;
 
             default:
                 std::cout << "NVMain: Rank: Unknown operation in command queue! " 
@@ -1020,6 +1291,14 @@ void StandardRank::Notify( NVMainRequest *request )
     }
     else if ( op == LOAD_WEIGHT )
     /* it need to update */
+    {
+        nextWrite = MAX( nextWrite, GetEventQueue()->GetCurrentCycle() 
+                                    + p->tBURST + p->tOST );
+
+        nextRead = MAX( nextRead, GetEventQueue()->GetCurrentCycle()
+                                    + p->tBURST + p->tCWD + p->tRTRS - p->tCAS );
+    }
+    else if (request->type == READCYCLE || request->type == REALCOMPUTE || request->type == POSTREAD || request->type == WRITECYCLE || request->type == COMPUTE )
     {
         nextWrite = MAX( nextWrite, GetEventQueue()->GetCurrentCycle() 
                                     + p->tBURST + p->tOST );

@@ -61,8 +61,8 @@ int main()
         std::cout << "//-----------------------------------------//" << std::endl;
         
         risc5sim->SetConfig( argc, argv );
-		risc5sim->IssueCommand( 384, 'L', 12312, 0 );
-		//risc5sim->IssueCommand( 384, 191991292, 'C', 12331, 'X');
+		//risc5sim->IssueCommand( 384, 'L', 12312, 0 );
+		risc5sim->IssueCommand( 384, 191991292, 'C', 12331, 'X');
 		while (true)
 		{
 			char conti;

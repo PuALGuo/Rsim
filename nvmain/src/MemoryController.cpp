@@ -51,6 +51,8 @@
 
 using namespace NVM;
 
+extern GlobalParams globalparams;
+
 /* Command queue removal predicate. */
 bool WasIssued( NVMainRequest *request );
 bool WasIssued( NVMainRequest *request ) { return (request->flags & NVMainRequest::FLAG_ISSUED); }
@@ -314,6 +316,8 @@ bool MemoryController::RequestComplete( NVMainRequest *request )
          *  Any activate/precharge/etc commands belong to the memory controller
          *  and we are in charge of deleting them!
          */
+        if ( request->type == READCYCLE )
+            std::cout<< "im fine thank you " << std::endl;
         delete request;
     }
     else
@@ -897,6 +901,62 @@ void MemoryController::SetID( unsigned int id )
 unsigned int MemoryController::GetID( )
 {
     return this->id;
+}
+NVMainRequest *MemoryController::MakeReadCycleRequest( NVMainRequest *triggerRequest )
+{
+    assert( triggerRequest->type == COMPUTE );
+
+    NVMainRequest *rcRequest = new NVMainRequest( );
+
+    rcRequest->type = READCYCLE;
+    rcRequest->issueCycle = GetEventQueue()->GetCurrentCycle();
+    rcRequest->address = triggerRequest->address;
+    rcRequest->owner = this;
+
+    return rcRequest;
+}
+
+NVMainRequest *MemoryController::MakeRealComputeRequest( NVMainRequest *triggerRequest )
+{
+    assert( triggerRequest->type == COMPUTE );
+
+    NVMainRequest *cRequest = new NVMainRequest( );
+
+    cRequest->type = REALCOMPUTE;
+    cRequest->issueCycle = GetEventQueue()->GetCurrentCycle();
+    cRequest->address = triggerRequest->address;
+    cRequest->owner = this;
+
+    return cRequest;    
+}
+
+NVMainRequest *MemoryController::MakePostReadRequest( NVMainRequest *triggerRequest )
+{
+    assert( triggerRequest->type == COMPUTE );
+
+    NVMainRequest *prRequest = new NVMainRequest( );
+
+    prRequest->type = POSTREAD;
+    prRequest->issueCycle = GetEventQueue()->GetCurrentCycle();
+    prRequest->address = triggerRequest->address;
+    prRequest->owner = this;
+
+    return prRequest;    
+}
+
+NVMainRequest *MemoryController::MakeWriteCycleRequest( NVMainRequest *triggerRequest )
+{
+    assert( triggerRequest->type == COMPUTE );
+
+    NVMainRequest *wcRequest = new NVMainRequest( );
+
+    wcRequest->type = WRITECYCLE;
+    wcRequest->issueCycle = GetEventQueue()->GetCurrentCycle();
+    wcRequest->address = triggerRequest->address;
+    wcRequest->address = globalparams.Output_Addr;
+    wcRequest->owner = this;
+
+    return wcRequest;    
 }
 
 NVMainRequest *MemoryController::MakeCachedRequest( NVMainRequest *triggerRequest )
@@ -1586,14 +1646,9 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
     {
         delete cachedRequest;
     }
-    if ( req->type == COMPUTE )
-    {
-        if( !activateQueued[rank][bank] && commandQueues[queueId].empty() )
-        {
-            
-        }    
-    }
-    else if( !activateQueued[rank][bank] && commandQueues[queueId].empty() )
+
+
+    if( !activateQueued[rank][bank] && commandQueues[queueId].empty() )
     {
         /* Any activate will request the starvation counter */
         activateQueued[rank][bank] = true;
@@ -1617,6 +1672,7 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
          */
         if( req->flags & NVMainRequest::FLAG_LAST_REQUEST && p->UsePrecharge )
         {
+            assert(!(req->type == COMPUTE));
             commandQueues[queueId].push_back( MakeImplicitPrechargeRequest( req ) );
             activeSubArray[rank][bank][subarray] = false;
             effectiveRow[rank][bank][subarray] = p->ROWS;
@@ -1625,6 +1681,22 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
         }
         else
         {
+            if ( req->type == COMPUTE )
+            {
+                NVMainRequest *rcRequest = MakeReadCycleRequest( req );
+                //flags need setting ??
+                commandQueues[queueId].push_back( rcRequest );
+
+                NVMainRequest *cRequest = MakeRealComputeRequest( req );
+                commandQueues[queueId].push_back( cRequest );
+            
+                NVMainRequest *prRequest = MakePostReadRequest( req );
+                commandQueues[queueId].push_back( prRequest );
+
+                NVMainRequest *wcRequest = MakeWriteCycleRequest( req );
+                commandQueues[queueId].push_back( wcRequest );
+            }
+
             commandQueues[queueId].push_back( req );
             std::cout << "im here" << std::endl;
         }
@@ -1652,6 +1724,23 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
         NVMainRequest *actRequest = MakeActivateRequest( req );
         actRequest->flags |= (writingArray != NULL && writingArray->IsWriting( )) ? NVMainRequest::FLAG_PRIORITY : 0;
         commandQueues[queueId].push_back( actRequest );
+
+        if ( req->type == COMPUTE )
+        {
+            NVMainRequest *rcRequest = MakeReadCycleRequest( req );
+            //flags need setting ??
+            commandQueues[queueId].push_back( rcRequest );
+
+            NVMainRequest *cRequest = MakeRealComputeRequest( req );
+            commandQueues[queueId].push_back( cRequest );
+            
+            NVMainRequest *prRequest = MakePostReadRequest( req );
+            commandQueues[queueId].push_back( prRequest );
+
+            NVMainRequest *wcRequest = MakeWriteCycleRequest( req );
+            commandQueues[queueId].push_back( wcRequest );
+        }
+
         commandQueues[queueId].push_back( req );
         activeSubArray[rank][bank][subarray] = true;
         effectiveRow[rank][bank][subarray] = row;
@@ -1680,6 +1769,8 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
             /* if Restricted Close-Page is applied, we should never be here */
             assert( p->ClosePage != 2 );
 
+            assert(!(req->type == COMPUTE));
+
             commandQueues[queueId].push_back( MakeImplicitPrechargeRequest( req ) );
             activeSubArray[rank][bank][subarray] = false;
             effectiveRow[rank][bank][subarray] = p->ROWS;
@@ -1700,6 +1791,22 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
         }
         else
         {
+            if ( req->type == COMPUTE )
+            {
+                NVMainRequest *rcRequest = MakeReadCycleRequest( req );
+                //flags need setting ??
+                commandQueues[queueId].push_back( rcRequest );
+
+                NVMainRequest *cRequest = MakeRealComputeRequest( req );
+                commandQueues[queueId].push_back( cRequest );
+            
+                NVMainRequest *prRequest = MakePostReadRequest( req );
+                commandQueues[queueId].push_back( prRequest );
+
+                NVMainRequest *wcRequest = MakeWriteCycleRequest( req );
+                commandQueues[queueId].push_back( wcRequest );
+            }    
+            
             commandQueues[queueId].push_back( req );
         }
 

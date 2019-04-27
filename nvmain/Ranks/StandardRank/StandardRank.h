@@ -164,9 +164,22 @@ class StandardRank : public Rank
     bool CanPowerDown( NVMainRequest *request );
     bool CanPowerUp( NVMainRequest *request );
     bool LoadWeight( NVMainRequest *request );
+    bool ReadCycle( NVMainRequest *request );
+    bool RealCompute( NVMainRequest *request );
+    bool PostRead( NVMainRequest *request );
+    bool WriteCycle( NVMainRequest *request );
+    bool Compute( NVMainRequest *request );
+
     //bool CanLoadWeight( NVMainRequest *request );
 
+    /* This if for the memory computing */
     Addrgen addrgen;
+    bool readcycle_flag = false;
+    bool realcompute_flag = false;
+    bool postread_flag = false;
+    bool writecycle_flag = false;
+    bool compute_flag = false;
+
 };
 
 };
