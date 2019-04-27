@@ -5,9 +5,7 @@
 
 #include "src/NVMObject.h"
 
-
 namespace NVM {
-
 
 class R5sim : public NVMObject
 {
@@ -22,9 +20,12 @@ class R5sim : public NVMObject
   	NVMainRequest *linetocommand( uint64_t addr, char opt, uint64_t data, uint64_t threadId );
   	bool IsIssuable( uint64_t addr, char opt, uint64_t data, uint64_t threadId );
     bool IsIssuable( NVMainRequest *request, FailReason * fail=NULL);
+    bool IssueCommand( uint64_t input_addr, uint64_t output_addr, char opt, uint64_t data, char slide);
   	bool IssueCommand( uint64_t addr, char opt, uint64_t data, uint64_t threadId );
   	bool IssueCommand( NVMainRequest * request );
     bool RequestComplete( NVMainRequest *request );
+    
+    bool setP( );
     
     uint64_t getCycle();
     
@@ -35,8 +36,8 @@ class R5sim : public NVMObject
     
 	  Stats *stats ;
     Config *config ;
-    GenericTraceReader *trace ;
-    TraceLine *tl ;
+    //GenericTraceReader *trace ;
+    //TraceLine *tl ;
     SimInterface *simInterface ;
     NVMain *nvmain ;
     EventQueue *mainEventQueue ;

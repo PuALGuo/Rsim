@@ -138,6 +138,7 @@ void EventQueue::InsertEvent( Event *event, ncycle_t when, int priority )
 {
     event->SetCycle( when );
 
+    std::cout << " You insert a Event at " << when << " while now is at " << currentCycle << std::endl;
     /* If this event time is before our previous nextEventCycle, change it. */
     if( when < nextEventCycle )
     {

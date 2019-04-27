@@ -902,7 +902,7 @@ unsigned int MemoryController::GetID( )
 NVMainRequest *MemoryController::MakeCachedRequest( NVMainRequest *triggerRequest )
 {
     /* This method should be called on *transaction* queue requests, thus only READ/WRITE possible. */
-    assert( triggerRequest->type == READ || triggerRequest->type == WRITE );
+    assert( triggerRequest->type == READ || triggerRequest->type == WRITE || triggerRequest->type == LOAD_WEIGHT || triggerRequest->type == COMPUTE);
 
     NVMainRequest *cachedRequest = new NVMainRequest( );
 
@@ -1407,7 +1407,74 @@ bool MemoryController::FindOldestReadyRequest( std::list<NVMainRequest *>& trans
 
     return rv;
 }
+bool MemoryController::FindComputeRequest( std::list<NVMainRequest *>& transactionQueue, NVMainRequest **computeRequest )
+{
+    bool rv = false;
+    std::list<NVMainRequest *>::iterator it;
 
+    *computeRequest = NULL;
+    for( it = transactionQueue.begin();it != transactionQueue.end(); it++ )
+    {
+        ncounter_t rank, bank;
+        ncounter_t queueId = GetCommandQueueId( (*it)->address );
+
+        if( !commandQueues[queueId].empty() ) continue;
+
+        (*it)->address.GetTranslatedAddress( NULL, NULL, &bank, &rank, NULL, NULL );
+
+        if( !activateQueued[rank][bank]         /* This bank is inactive */
+            && !bankNeedRefresh[rank][bank]     /* The bank is not waiting for a refresh */
+            && !refreshQueued[rank][bank]       /* Don't interrupt refreshes queued on bank group head. */
+            && commandQueues[queueId].empty()   /* The request queue is empty */
+            && (*it)->arrivalCycle != GetEventQueue()->GetCurrentCycle() )
+        {
+            *computeRequest = (*it);
+            transactionQueue.erase( it );
+
+            if( IsLastRequest( transactionQueue, (*computeRequest) ) )
+                (*computeRequest)->flags |= NVMainRequest::FLAG_LAST_REQUEST;
+
+            rv = true;
+            break;
+        }
+    }
+
+    return rv;
+}
+bool MemoryController::FindLoadRequest( std::list<NVMainRequest *>& transactionQueue, NVMainRequest **loadRequest )
+{
+    bool rv = false;
+    std::list<NVMainRequest *>::iterator it;
+
+    *loadRequest = NULL;
+    for( it = transactionQueue.begin();it != transactionQueue.end(); it++ )
+    {
+        ncounter_t rank, bank;
+        ncounter_t queueId = GetCommandQueueId( (*it)->address );
+
+        if( !commandQueues[queueId].empty() ) continue;
+
+        (*it)->address.GetTranslatedAddress( NULL, NULL, &bank, &rank, NULL, NULL );
+
+        if( !activateQueued[rank][bank]         /* This bank is inactive */
+            && !bankNeedRefresh[rank][bank]     /* The bank is not waiting for a refresh */
+            && !refreshQueued[rank][bank]       /* Don't interrupt refreshes queued on bank group head. */
+            && commandQueues[queueId].empty()   /* The request queue is empty */
+            && (*it)->arrivalCycle != GetEventQueue()->GetCurrentCycle() )
+        {
+            *loadRequest = (*it);
+            transactionQueue.erase( it );
+
+            if( IsLastRequest( transactionQueue, (*loadRequest) ) )
+                (*loadRequest)->flags |= NVMainRequest::FLAG_LAST_REQUEST;
+
+            rv = true;
+            break;
+        }
+    }
+
+    return rv;
+}
 bool MemoryController::FindClosedBankRequest( std::list<NVMainRequest *>& transactionQueue, 
                                               NVMainRequest **closedRequest )
 {
@@ -1519,8 +1586,14 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
     {
         delete cachedRequest;
     }
-
-    if( !activateQueued[rank][bank] && commandQueues[queueId].empty() )
+    if ( req->type == COMPUTE )
+    {
+        if( !activateQueued[rank][bank] && commandQueues[queueId].empty() )
+        {
+            
+        }    
+    }
+    else if( !activateQueued[rank][bank] && commandQueues[queueId].empty() )
     {
         /* Any activate will request the starvation counter */
         activateQueued[rank][bank] = true;
@@ -1553,8 +1626,9 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
         else
         {
             commandQueues[queueId].push_back( req );
+            std::cout << "im here" << std::endl;
         }
-
+        //std::cout << "im here" << std::endl;
         rv = true;
     }
     else if( activateQueued[rank][bank] 

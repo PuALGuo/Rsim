@@ -88,7 +88,8 @@ class SubArray : public NVMObject
     bool Write( NVMainRequest *request );
     bool Precharge( NVMainRequest *request );
     bool Refresh( NVMainRequest *request );
-
+    bool LoadWeight( NVMainRequest *request );
+    
     bool IsIssuable( NVMainRequest *req, FailReason *reason = NULL );
     bool IssueCommand( NVMainRequest *req );
     bool RequestComplete( NVMainRequest *req );

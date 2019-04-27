@@ -69,6 +69,25 @@ enum StandardRank_State
     STANDARDRANK_PDPS       /***< Rank is in precharge powered down, slow exit mode */
 };
 
+class Addrgen
+{
+  public:
+    Addrgen();
+    ~Addrgen();
+
+    void init();
+    NVMAddress GetAddr_weight( NVMAddress *addr );
+    NVMAddress GetAddr_input( NVMAddress *addr );
+    void generator_weight();
+    void generator_input();
+    bool isComplete();
+
+  protected:
+    ncounter_t n_col, n_row, n_channel, n_kernel;
+    bool complete;
+
+};
+
 class StandardRank : public Rank
 {
   public:
@@ -144,6 +163,10 @@ class StandardRank : public Rank
     bool PowerUp( NVMainRequest *request );
     bool CanPowerDown( NVMainRequest *request );
     bool CanPowerUp( NVMainRequest *request );
+    bool LoadWeight( NVMainRequest *request );
+    //bool CanLoadWeight( NVMainRequest *request );
+
+    Addrgen addrgen;
 };
 
 };

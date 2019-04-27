@@ -115,6 +115,9 @@ bool OffChipBus::IssueCommand( NVMainRequest *req )
 
     req->address.GetTranslatedAddress( NULL, NULL, NULL, &opRank, NULL, NULL );
 
+    if (req->type == LOAD_WEIGHT) 
+        std::cout << "rec Load command in connect*****" << std::endl;
+
     assert( GetChild( req )->IsIssuable( req ) );
 
     success = GetChild( req )->IssueCommand( req );
@@ -130,6 +133,8 @@ bool OffChipBus::IssueCommand( NVMainRequest *req )
             GetChild( childIdx )->Notify( req );
     }
 
+    std::cout << "rec Load command in connect(complete)*****" << std::endl;
+    
     return success;
 }
 
