@@ -345,7 +345,7 @@ bool FRFCFS_WQF::RequestComplete( NVMainRequest * request )
                             / static_cast<double>(measuredTotalLatencies+1);
         measuredTotalLatencies += 1;
     }
-    else if ( request->type == LOAD_WEIGHT )
+    else if ( request->type == LOAD_WEIGHT || request->type == READCYCLE || request->type == REALCOMPUTE || request->type == POSTREAD || request->type == WRITECYCLE || request->type == COMPUTE )
     {
         request->status = MEM_REQUEST_COMPLETE; 
         request->completionCycle = GetEventQueue()->GetCurrentCycle();

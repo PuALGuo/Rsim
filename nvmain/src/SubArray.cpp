@@ -884,28 +884,28 @@ bool SubArray::PostRead( NVMainRequest *request)
 
     nextPrecharge = MAX( nextPrecharge, 
                          GetEventQueue()->GetCurrentCycle() 
-                             + MAX( p->tBURST, p->tCCD ) * 128
+                             + MAX( p->tBURST, p->tCCD ) * 2
                              + p->tAL + p->tBURST + p->tRTP - p->tCCD );
 
     nextRead = MAX( nextRead, 
                     GetEventQueue()->GetCurrentCycle() 
-                        + MAX( p->tBURST, p->tCCD ) * 128 );
+                        + MAX( p->tBURST, p->tCCD ) * 2 );
 
     nextWrite = MAX( nextWrite, 
                      GetEventQueue()->GetCurrentCycle() 
-                         + MAX( p->tBURST, p->tCCD ) * 128
+                         + MAX( p->tBURST, p->tCCD ) * 2
                          + p->tCAS + p->tBURST + p->tRTRS - p->tCWD );
 
     /* Read->Powerdown is typical the same for READ and READ_PRECHARGE. */
     nextPowerDown = MAX( nextPowerDown,
                          GetEventQueue()->GetCurrentCycle()
-                            + MAX( p->tBURST, p->tCCD ) * 128
+                            + MAX( p->tBURST, p->tCCD ) * 2
                             + p->tCAS + p->tAL + p->tBURST + 1);
 
     //dataCycles += p->tBURST;
     //request->type =READ;
     GetEventQueue( )->InsertEvent( EventResponse, this, request, 
-            GetEventQueue()->GetCurrentCycle() + p->tCAS + p->tBURST*128);
+            GetEventQueue()->GetCurrentCycle() + p->tCAS + p->tBURST*2);
     
     std::cout << "rec postread command in bank(complete)*****" << std::endl;
     return true; 
@@ -913,7 +913,7 @@ bool SubArray::PostRead( NVMainRequest *request)
 
 bool SubArray::WriteCycle( NVMainRequest *request)
 {
-    std::cout << "rec writecycle command in bank*****" << std::endl;
+    std::cout << "rec writecycle command in Sub*****" << std::endl;
     uint64_t readRow;
 
     request->address.GetTranslatedAddress( &readRow, NULL, NULL, NULL, NULL, NULL );
@@ -935,12 +935,14 @@ bool SubArray::WriteCycle( NVMainRequest *request)
             << std::endl;
         return false;
     }
+    /*
     else if( readRow != openRow )
     {
         std::cerr << "NVMain Error: try to read a row that is not opened in a subarray!"
             << std::endl;
         return false;
     }
+    */
 
     /* Any additional latency for data encoding. */
     ncycles_t decLat = (dataEncoder ? dataEncoder->Read( request ) : 0);
@@ -974,7 +976,7 @@ bool SubArray::WriteCycle( NVMainRequest *request)
     GetEventQueue( )->InsertEvent( EventResponse, this, request, 
             GetEventQueue()->GetCurrentCycle() + p->tCAS + p->tBURST + decLat );
     
-    std::cout << "rec writecycle command in bank(complete)*****" << std::endl;
+    std::cout << "rec writecycle command in Sub(complete)*****" << std::endl;
     return true;  
 }
 
@@ -1480,23 +1482,23 @@ bool SubArray::IsIssuable( NVMainRequest *req, FailReason *reason )
     }
     else if ( req->type == REALCOMPUTE ) 
     {
-        std::cout << "something wrong in the sub " << std::endl;
-        rv = false ;
+        //std::cout << "something wrong in the sub " << std::endl;
+        rv = true ;
     }
     else if ( req->type == POSTREAD )
     {
-        std::cout << "something wrong in the sub " << std::endl;
-        rv = false ;
+        //std::cout << "something wrong in the sub " << std::endl;
+        rv = true ;
     }
     else if ( req->type == WRITECYCLE )
     {
-        std::cout << "something wrong in the sub " << std::endl;
-        rv = false ;
+        //std::cout << "something wrong in the sub " << std::endl;
+        rv = true ;
     }
     else if ( req->type == COMPUTE )
     {
-        std::cout << "something wrong in the sub " << std::endl;
-        rv = false ;
+        //std::cout << "something wrong in the sub " << std::endl;
+        rv = true ;
     }
     else if( req->type == PRECHARGE || req->type == PRECHARGE_ALL )
     {

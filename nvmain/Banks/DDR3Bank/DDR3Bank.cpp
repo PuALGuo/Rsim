@@ -691,7 +691,7 @@ bool DDR3Bank::RealCompute( NVMainRequest *request )
     bool success = GetChild( request )->IssueCommand( request );
 
     //dataCycles += p->tBURST; 
-    std::cout << "rec readcompute command in bank(complete)*****" << std::endl;
+    std::cout << "rec realcompute command in bank(complete)*****" << std::endl;
     
     return success;
 }
@@ -738,13 +738,15 @@ bool DDR3Bank::WriteCycle( NVMainRequest *request )
             << std::endl;
         return false;
     }
+    /*
     else if( state != DDR3BANK_OPEN )
     {
         std::cerr << "NVMain Error: try to read a bank that is not active!"
             << std::endl;
         return false;
     }
-    
+    */
+   
     uint64_t writeRow, writeSubArray;
     request->address.GetTranslatedAddress( &writeRow, NULL, NULL, NULL, NULL, &writeSubArray );
 
@@ -1070,23 +1072,23 @@ bool DDR3Bank::IsIssuable( NVMainRequest *req, FailReason *reason )
     }
     else if ( req->type == REALCOMPUTE ) 
     {
-        std::cout << "something wrong in the bank " << std::endl;
-        rv = false ;
+        //std::cout << "something wrong in the bank " << std::endl;
+        rv = true ;
     }
     else if ( req->type == POSTREAD )
     {
-        std::cout << "something wrong in the bank " << std::endl;
-        rv = false ;
+        //std::cout << "something wrong in the bank " << std::endl;
+        rv = true ;
     }
     else if ( req->type == WRITECYCLE )
     {
-        std::cout << "something wrong in the bank " << std::endl;
-        rv = false ;
+        //std::cout << "something wrong in the bank " << std::endl;
+        rv = true ;
     }
     else if ( req->type == COMPUTE )
     {
-        std::cout << "something wrong in the bank " << std::endl;
-        rv = false ;
+        //std::cout << "something wrong in the bank " << std::endl;
+        rv = true ;
     }
     else if( req->type == PRECHARGE || req->type == PRECHARGE_ALL )
     {

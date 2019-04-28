@@ -630,7 +630,7 @@ bool StandardRank::PostRead( NVMainRequest *request )
 bool StandardRank::WriteCycle( NVMainRequest *request )
 {
     uint64_t writeBank;
-    std::cout << "rec readcycle command in rank*****" << std::endl;
+    std::cout << "rec writecycle command in rank*****" << std::endl;
     //addrgen.init();
 
     request->address.GetTranslatedAddress( NULL, NULL, &writeBank, NULL, NULL, NULL );
@@ -665,13 +665,13 @@ bool StandardRank::WriteCycle( NVMainRequest *request )
         std::cerr << "NVMain Error: Rank Write FAILED! Did you check IsIssuable?" 
             << std::endl;
     }
-    std::cout << "rec readcycle command in rank(complete)*****" << std::endl;
+    std::cout << "rec writecycle command in rank(complete)*****" << std::endl;
     return success;   
 }
 
 bool StandardRank::Compute( NVMainRequest *request )
 {
-    std::cout << "rec readcycle command in rank*****" << std::endl;
+    std::cout << "rec compute command in rank*****" << std::endl;
 
     compute_flag = false;
     readcycle_flag = false;
@@ -680,7 +680,7 @@ bool StandardRank::Compute( NVMainRequest *request )
     writecycle_flag = false;
 
     GetEventQueue( )->InsertEvent( EventResponse, this, request, GetEventQueue()->GetCurrentCycle() + 1 );
-    std::cout << "rec readcycle command in rank*****" << std::endl;
+    std::cout << "rec compute command in rank*****" << std::endl;
 
     return true;
 }
@@ -1310,6 +1310,15 @@ void StandardRank::Notify( NVMainRequest *request )
 
 bool StandardRank::RequestComplete( NVMainRequest* req )
 {
+    if( req->type == READCYCLE )
+        readcycle_flag = true;
+    else if( req->type == REALCOMPUTE )
+        realcompute_flag = true;
+    else if( req->type == POSTREAD )
+        postread_flag = true;
+    else if( req->type == WRITECYCLE )
+        writecycle_flag = true;
+        
     if( req->owner == this )
     {
         switch( req->type )

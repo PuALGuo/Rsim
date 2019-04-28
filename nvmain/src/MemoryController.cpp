@@ -316,7 +316,7 @@ bool MemoryController::RequestComplete( NVMainRequest *request )
          *  Any activate/precharge/etc commands belong to the memory controller
          *  and we are in charge of deleting them!
          */
-        if ( request->type == READCYCLE )
+        if ( request->type == READCYCLE || request->type == REALCOMPUTE || request->type == POSTREAD || request->type == WRITECYCLE )
             std::cout<< "im fine thank you " << std::endl;
         delete request;
     }
