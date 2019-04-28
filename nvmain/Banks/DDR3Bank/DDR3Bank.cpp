@@ -961,6 +961,7 @@ ncycle_t DDR3Bank::NextIssuable( NVMainRequest *request )
     else if( request->type == READCYCLE || request->type == REALCOMPUTE || request->type == POSTREAD || request->type == WRITECYCLE || request->type == COMPUTE ) nextCompare = MAX( nextRead, nextWrite );
     else assert(false);
 
+    //std::cout << "bank next" << nextCompare << std::endl;
     return MAX(GetChild( request )->NextIssuable( request ), nextCompare );
 }
 
@@ -984,6 +985,7 @@ bool DDR3Bank::IsIssuable( NVMainRequest *req, FailReason *reason )
             || state == DDR3BANK_PDPF || state == DDR3BANK_PDPS || state == DDR3BANK_PDA )
 
         {
+            std::cout << "bank is not ok" << std::endl;
             rv = false;
             if( reason ) 
                 reason->reason = BANK_TIMING;
@@ -1035,7 +1037,7 @@ bool DDR3Bank::IsIssuable( NVMainRequest *req, FailReason *reason )
                 reason->reason = BANK_TIMING;
         }
         else if( nextRead > (GetEventQueue()->GetCurrentCycle()) 
-            || state != DDR3BANK_OPEN  )
+            || state != DDR3BANK_OPEN )
         {
             rv = false;
             std::cout << "bank is reading" << std::endl;
@@ -1058,7 +1060,7 @@ bool DDR3Bank::IsIssuable( NVMainRequest *req, FailReason *reason )
                 reason->reason = BANK_TIMING;
         }
         else if( nextRead > (GetEventQueue()->GetCurrentCycle()) 
-            || state != DDR3BANK_OPEN  )
+            || state != DDR3BANK_OPEN )
         {
             rv = false;
             std::cout << "bank is reading" << std::endl;

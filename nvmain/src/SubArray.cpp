@@ -313,6 +313,10 @@ bool SubArray::Activate( NVMainRequest *request )
                          GetEventQueue()->GetCurrentCycle() 
                              + MAX( p->tRCD, p->tRAS ) );
 
+    nextLoad = MAX(nextRead,
+                    GetEventQueue()->GetCurrentCycle()
+                         + p->tRCD - p->tAL);
+
     /* the request is deleted by RequestComplete() */
     request->owner = this;
     GetEventQueue( )->InsertEvent( EventResponse, this, request, 
@@ -759,6 +763,9 @@ bool SubArray::LoadWeight( NVMainRequest *request )
                          GetEventQueue()->GetCurrentCycle() 
                              + MAX( p->tBURST, p->tCCD ) * (request->burstCount  - 1)
                              + p->tCAS + p->tBURST + p->tRTRS - p->tCWD + decLat );
+        
+        nextActivate = MAX( nextActivate, GetEventQueue()->GetCurrentCycle() + p->tCAS + p->tBURST - p->tAL + decLat );
+                             
     }
 
     /* Read->Powerdown is typical the same for READ and READ_PRECHARGE. */
@@ -1374,10 +1381,11 @@ ncycle_t SubArray::NextIssuable( NVMainRequest *request )
     else if( request->type == READ ) nextCompare = nextRead;
     else if( request->type == WRITE ) nextCompare = nextWrite;
     else if( request->type == PRECHARGE ) nextCompare = nextPrecharge;
-    else if( request->type == LOAD_WEIGHT ) nextCompare = MAX(nextRead, nextWrite);
-    else if( request->type == READCYCLE || request->type == REALCOMPUTE || request->type == POSTREAD || request->type == WRITECYCLE || request->type == COMPUTE ) nextCompare = MAX( nextRead, nextWrite );
+    else if( request->type == LOAD_WEIGHT ) nextCompare = nextLoad;
+    else if( request->type == READCYCLE || request->type == REALCOMPUTE || request->type == POSTREAD || request->type == WRITECYCLE || request->type == COMPUTE ) nextCompare = nextCompute;
     else assert(false);
 
+    //std::cout << "sub next " << nextCompare << std::endl;
     // Should have no children
     return nextCompare;
 }
@@ -1402,6 +1410,14 @@ bool SubArray::IsIssuable( NVMainRequest *req, FailReason *reason )
             || (p->WritePausing && isWriting && writeRequest->flags & NVMainRequest::FLAG_FORCED) /* or, write can't be paused. */
             || (p->WritePausing && isWriting && !(req->flags & NVMainRequest::FLAG_PRIORITY)) ) /* Prevent normal row buffer misses from pausing writes at odd times. */
         {
+            if(nextActivate > (GetEventQueue()->GetCurrentCycle()))
+                std::cout << "sub is not ok" << std::endl;
+            else if (p->UsePrecharge && state != SUBARRAY_CLOSED)
+                std::cout << "sub is noot ok" << std::endl;
+            else if (p->WritePausing && isWriting && writeRequest->flags & NVMainRequest::FLAG_FORCED)
+                std::cout << "sub is nooot ok" << std::endl;
+            else if (p->WritePausing && isWriting && !(req->flags & NVMainRequest::FLAG_PRIORITY))
+                std::cout << "sub is noooot ok" << std::endl;
             rv = false;
             if( reason ) 
                 reason->reason = SUBARRAY_TIMING;
@@ -1711,6 +1727,12 @@ bool SubArray::RequestComplete( NVMainRequest *req )
     }
     else
     {
+        if (req->type == WRITECYCLE || req->type == LOAD_WEIGHT )
+        {
+            state = SUBARRAY_CLOSED;
+            openRow = p->ROWS;
+            precharges++;
+        }
         return GetParent( )->RequestComplete( req );
     }
 }

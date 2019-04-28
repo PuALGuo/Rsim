@@ -62,14 +62,35 @@ int main()
         
         risc5sim->SetConfig( argc, argv );
 		//risc5sim->IssueCommand( 384, 'L', 12312, 0 );
-		risc5sim->IssueCommand( 384, 191991292, 'C', 12331, 'X');
+		//risc5sim->IssueCommand( 384, 191991292, 'C', 12331, 'X');
+		int command=0;
 		while (true)
 		{
 			char conti;
 			std::cout << " continue cycle ? Y/N " << " currentCycle is " << risc5sim->getCycle() << std::endl;
 			std::cin >> conti;
 			if ((conti == 'Y') || (conti == 'y'))
+			{
+				if(risc5sim->IsIssuable( 384, 'L', 12312, 0 ))
+				{
+					if(command < 3)
+					{
+						std::cout << "I send a load command" << std::endl;
+						risc5sim->IssueCommand( 384+command, 'L', 12312, 0);
+						command++;
+					}
+					else
+					{
+						std::cout << "there are no commands" << std::endl;
+					}	
+				}
+				else
+				{
+					std::cout << "the queue is full" << std::endl;
+				}
+
 				risc5sim->Cycle(100);
+			}
 		}
         std::cout << "All is done" << std::endl ;
         std::cout << "//-----------------------------------------//" << std::endl;
@@ -212,6 +233,29 @@ void R5sim::Cycle( ncycle_t steps )
 		}
 		
 }
+bool R5sim::IsIssuable( uint64_t input_addr, uint64_t output_addr, char opt, uint64_t data, char slide)
+{
+	if ( opt == 'C')
+	{
+		globalparams.Input_Addr.SetPhysicalAddress(input_addr);
+		globalparams.Output_Addr.SetPhysicalAddress(output_addr);
+		if( slide == 'X')
+			globalparams.slide=X;
+		else if ( slide == 'Y' )
+			globalparams.slide=Y;
+		else
+		{
+			std::cout << "wrong slide_mode " << std::endl;
+			return false;
+		}
+		return IsIssuable(input_addr, opt, data, (uint64_t)0);
+	}
+	else
+	{
+		std::cout<< "wrong command" <<std::endl;
+		return false;
+	}
+}
 
 bool R5sim::IsIssuable( uint64_t addr, char opt, uint64_t data, uint64_t threadId = 0 )
 {
@@ -226,6 +270,10 @@ bool R5sim::IsIssuable( uint64_t addr, char opt, uint64_t data, uint64_t threadI
 		request->type = READ;
 	else if ( opt == 'W')
 		request->type = WRITE;
+	else if ( opt == 'L')
+		request->type = LOAD_WEIGHT;
+	else if ( opt == 'C')
+		request->type = COMPUTE;
 	else 
 		std::cout << "Warning: Unknown operation '" << opt << "'" << std::endl;
 	

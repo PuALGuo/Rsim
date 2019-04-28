@@ -241,7 +241,9 @@ bool FRFCFS_WQF::IsIssuable( NVMainRequest *request, FailReason * /*fail*/ )
     /* during a write drain, no write can enqueue */
     if( (request->type == READ  && readQueue->size()  >= readQueueSize) 
             || (request->type == WRITE && ( writeQueue->size() >= writeQueueSize 
-                    || m_draining == true || force_drain == true ) ) )
+                    || m_draining == true || force_drain == true ) ) 
+            || (request->type == LOAD_WEIGHT && ( loadQueue->size() >= loadQueueSize ))
+            || (request->type == COMPUTE && ( computeQueue->size() >= computeQueueSize )))
     {
         rv = false;
     }
@@ -347,6 +349,12 @@ bool FRFCFS_WQF::RequestComplete( NVMainRequest * request )
     }
     else if ( request->type == LOAD_WEIGHT || request->type == READCYCLE || request->type == REALCOMPUTE || request->type == POSTREAD || request->type == WRITECYCLE || request->type == COMPUTE )
     {
+        /*
+        if( request->type == LOAD_WEIGHT )
+            Prequeue( loadQueueId, request );
+        else if( request->type == COMPUTE )
+            Prequeue( computeQueueId, request );
+        */
         request->status = MEM_REQUEST_COMPLETE; 
         request->completionCycle = GetEventQueue()->GetCurrentCycle();
     }

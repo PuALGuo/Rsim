@@ -902,9 +902,10 @@ ncycle_t StandardRank::NextIssuable( NVMainRequest *request )
     else if( request->type == WRITE || request->type == WRITE_PRECHARGE ) nextCompare = nextWrite;
     else if( request->type == PRECHARGE || request->type == PRECHARGE_ALL ) nextCompare = nextPrecharge;
     else if( request->type == LOAD_WEIGHT ) nextCompare = MAX( nextRead, nextWrite );
-    else if(request->type == READCYCLE || request->type == REALCOMPUTE || request->type == POSTREAD || request->type == WRITECYCLE || request->type == COMPUTE ) nextCompare = MAX( nextRead, nextWrite );
+    else if( request->type == READCYCLE || request->type == REALCOMPUTE || request->type == POSTREAD || request->type == WRITECYCLE || request->type == COMPUTE ) nextCompare = MAX( nextRead, nextWrite );
     else assert(false);
         
+    //std::cout << "rank next " << nextCompare << std::endl;
     return MAX(GetChild( request )->NextIssuable( request ), nextCompare );
 }
 
@@ -920,7 +921,12 @@ bool StandardRank::IsIssuable( NVMainRequest *req, FailReason *reason )
         return true;
     }
     */
-
+    /*
+    if (req->type == ACTIVATE)
+        std::cout << "act command" << std::endl;
+    else if(req->type == LOAD_WEIGHT ) 
+        std::cout << "load command " << std::endl;
+    */
     req->address.GetTranslatedAddress( NULL, NULL, &opBank, NULL, NULL, NULL );
 
     rv = true;
@@ -932,7 +938,7 @@ bool StandardRank::IsIssuable( NVMainRequest *req, FailReason *reason )
                 > GetEventQueue()->GetCurrentCycle() )  
         {
             rv = false;
-
+            std::cout << "last" << lastActivate[(RAWindex + 1) % rawNum] + p->tRAW << std::endl;
             if( reason ) 
                 reason->reason = RANK_TIMING;
         }

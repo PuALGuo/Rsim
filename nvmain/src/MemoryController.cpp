@@ -296,6 +296,7 @@ void MemoryController::CleanupCallback( void * /*data*/ )
     for( ncycle_t queueId = 0; queueId < commandQueueCount; queueId++ )
     {
         /* Remove issued requests from the command queue. */
+        std::cout << "i do the cleanup " << std::endl;
         commandQueues[queueId].erase(
             std::remove_if( commandQueues[queueId].begin(), 
                             commandQueues[queueId].end(), 
@@ -1516,10 +1517,7 @@ bool MemoryController::FindLoadRequest( std::list<NVMainRequest *>& transactionQ
 
         (*it)->address.GetTranslatedAddress( NULL, NULL, &bank, &rank, NULL, NULL );
 
-        if( !activateQueued[rank][bank]         /* This bank is inactive */
-            && !bankNeedRefresh[rank][bank]     /* The bank is not waiting for a refresh */
-            && !refreshQueued[rank][bank]       /* Don't interrupt refreshes queued on bank group head. */
-            && commandQueues[queueId].empty()   /* The request queue is empty */
+        if( commandQueues[queueId].empty()   /* The request queue is empty */
             && (*it)->arrivalCycle != GetEventQueue()->GetCurrentCycle() )
         {
             *loadRequest = (*it);
@@ -1649,7 +1647,7 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
 
 
     if( !activateQueued[rank][bank] && commandQueues[queueId].empty() )
-    {
+    {  
         /* Any activate will request the starvation counter */
         activateQueued[rank][bank] = true;
         activeSubArray[rank][bank][subarray] = true;
@@ -1681,6 +1679,11 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
         }
         else
         {
+            activeSubArray[rank][bank][subarray] = false;
+            effectiveRow[rank][bank][subarray] = p->ROWS;
+            effectiveMuxedRow[rank][bank][subarray] = p->ROWS;
+            activateQueued[rank][bank] = false;
+
             if ( req->type == COMPUTE )
             {
                 NVMainRequest *rcRequest = MakeReadCycleRequest( req );
@@ -1698,7 +1701,7 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
             }
 
             commandQueues[queueId].push_back( req );
-            std::cout << "im here" << std::endl;
+            //std::cout << "im here？？？" <<" id " << queueId << std::endl;
         }
         //std::cout << "im here" << std::endl;
         rv = true;
@@ -1843,8 +1846,16 @@ void MemoryController::CycleCommandQueues( )
          * iterator over all queues.
          */
         ncounter_t queueId = (curQueue + queueIdx) % commandQueueCount;
+        //std::cout << "test for queueId " << queueId << std::endl;
         FailReason fail;
 
+        /*
+        std::cout << "test wrong" << std::endl;
+        if( commandQueues[queueId].empty( ) )
+            std::cout << "1****************" << std::endl;
+        else if( !(lastIssueCycle != GetEventQueue()->GetCurrentCycle() ))
+            std::cout << "2************" << std::endl;
+        */
         if( !commandQueues[queueId].empty( )
             && lastIssueCycle != GetEventQueue()->GetCurrentCycle()
             && GetChild( )->IsIssuable( commandQueues[queueId].at( 0 ), &fail ) )
@@ -1855,7 +1866,7 @@ void MemoryController::CycleCommandQueues( )
                          << queueHead->type << " for address 0x" << std::hex 
                          << queueHead->address.GetPhysicalAddress()
                          << std::dec << " for queue " << queueId << std::endl;
-
+            //std::cout << "test for queueId " << queueId << std::endl;
             GetChild( )->IssueCommand( queueHead );
 
             queueHead->flags |= NVMainRequest::FLAG_ISSUED;
@@ -1992,14 +2003,15 @@ ncycle_t MemoryController::NextIssuable( NVMainRequest * /*request*/ )
                 continue;
 
             NVMainRequest *queueHead = commandQueues[queueIdx].at( 0 );
-
+            //std::cout << "memctr next" << nextWakeup << std::endl;
             nextWakeup = MIN( nextWakeup, GetChild( )->NextIssuable( queueHead ) );
         }
     }
 
+    //std::cout << "memctr next" << nextWakeup << std::endl;
     if( nextWakeup <= GetEventQueue( )->GetCurrentCycle( ) )
         nextWakeup = GetEventQueue( )->GetCurrentCycle( ) + 1;
-
+    //std::cout << "memctr next" << nextWakeup << std::endl;
     return nextWakeup;
 }
 

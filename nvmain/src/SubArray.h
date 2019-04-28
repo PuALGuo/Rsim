@@ -144,6 +144,8 @@ class SubArray : public NVMObject
     ncycle_t nextRead;
     ncycle_t nextWrite;
     ncycle_t nextPowerDown;
+    ncycle_t nextCompute;
+    ncycle_t nextLoad;
     bool writeCycle;
     std::vector<NVMainRequest *> writeBackRequests;
     bool isWriting;

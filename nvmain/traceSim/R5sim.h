@@ -18,6 +18,7 @@ class R5sim : public NVMObject
     void Cycle( ncycle_t steps );
 
   	NVMainRequest *linetocommand( uint64_t addr, char opt, uint64_t data, uint64_t threadId );
+    bool IsIssuable( uint64_t input_addr, uint64_t output_addr, char opt, uint64_t data, char slide);
   	bool IsIssuable( uint64_t addr, char opt, uint64_t data, uint64_t threadId );
     bool IsIssuable( NVMainRequest *request, FailReason * fail=NULL);
     bool IssueCommand( uint64_t input_addr, uint64_t output_addr, char opt, uint64_t data, char slide);
