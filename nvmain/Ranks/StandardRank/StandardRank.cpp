@@ -679,7 +679,7 @@ bool StandardRank::Compute( NVMainRequest *request )
     postread_flag = false;
     writecycle_flag = false;
 
-    GetEventQueue( )->InsertEvent( EventResponse, this, request, GetEventQueue()->GetCurrentCycle() + 1 );
+    GetEventQueue( )->InsertEvent( EventResponse, this, request, GetEventQueue()->GetCurrentCycle() + 1);
     std::cout << "rec compute command in rank*****" << std::endl;
 
     return true;

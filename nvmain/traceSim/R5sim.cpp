@@ -73,10 +73,11 @@ int main()
 			{
 				if(risc5sim->IsIssuable( 384, 'L', 12312, 0 ))
 				{
-					if(command < 3)
+					if(command < 2)
 					{
 						std::cout << "I send a load command" << std::endl;
-						risc5sim->IssueCommand( 384+command, 'L', 12312, 0);
+						//risc5sim->IssueCommand( 384+command, 'L', 12312, 0);
+						risc5sim->IssueCommand( 384, 191991292, 'C', 12331, 'X');
 						command++;
 					}
 					else

@@ -1867,6 +1867,7 @@ void MemoryController::CycleCommandQueues( )
                          << queueHead->address.GetPhysicalAddress()
                          << std::dec << " for queue " << queueId << std::endl;
             //std::cout << "test for queueId " << queueId << std::endl;
+
             GetChild( )->IssueCommand( queueHead );
 
             queueHead->flags |= NVMainRequest::FLAG_ISSUED;

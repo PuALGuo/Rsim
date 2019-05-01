@@ -316,6 +316,11 @@ bool SubArray::Activate( NVMainRequest *request )
     nextLoad = MAX(nextRead,
                     GetEventQueue()->GetCurrentCycle()
                          + p->tRCD - p->tAL);
+    
+    nextCompute = MAX(nextRead,
+                        GetEventQueue()->GetCurrentCycle()
+                             + p->tRCD - p->tAL);
+    
 
     /* the request is deleted by RequestComplete() */
     request->owner = this;
@@ -765,6 +770,7 @@ bool SubArray::LoadWeight( NVMainRequest *request )
                              + p->tCAS + p->tBURST + p->tRTRS - p->tCWD + decLat );
         
         nextActivate = MAX( nextActivate, GetEventQueue()->GetCurrentCycle() + p->tCAS + p->tBURST - p->tAL + decLat );
+        nextCompute = MAX( nextActivate, GetEventQueue()->GetCurrentCycle() + p->tCAS + p->tBURST - p->tAL + decLat );
                              
     }
 
@@ -792,7 +798,7 @@ bool SubArray::ReadCycle( NVMainRequest *request)
     request->address.GetTranslatedAddress( &readRow, NULL, NULL, NULL, NULL, NULL );
 
     /* Check if we need to cancel or pause a write to service this request. */
-    CheckWritePausing( );
+    //CheckWritePausing( );
 
     /* TODO: Can we remove this sanity check and totally trust IsIssuable()? */
     /* sanity check */
@@ -835,7 +841,8 @@ bool SubArray::ReadCycle( NVMainRequest *request)
                              + MAX( p->tBURST, p->tCCD ) * (request->burstCount  - 1)
                              + p->tCAS + p->tBURST + p->tRTRS - p->tCWD + decLat );
     }
-
+    nextActivate = MAX( nextActivate, GetEventQueue()->GetCurrentCycle() + p->tCAS + p->tBURST + decLat);
+    nextCompute = MAX( nextActivate, GetEventQueue()->GetCurrentCycle() + p->tCAS + p->tBURST + decLat);
     /* Read->Powerdown is typical the same for READ and READ_PRECHARGE. */
     nextPowerDown = MAX( nextPowerDown,
                          GetEventQueue()->GetCurrentCycle()
@@ -856,6 +863,7 @@ bool SubArray::RealCompute( NVMainRequest *request)
 {
     std::cout << "rec realcompute command in bank*****" << std::endl;
 
+    
     nextPrecharge = MAX( nextPrecharge, 
                          GetEventQueue()->GetCurrentCycle() 
                              + MAX( p->tBURST, p->tCCD ) * (request->burstCount - 1)
@@ -875,7 +883,9 @@ bool SubArray::RealCompute( NVMainRequest *request)
                          GetEventQueue()->GetCurrentCycle()
                             + MAX( p->tBURST, p->tCCD ) * (request->burstCount  - 1)
                             + p->tCAS + p->tAL + p->tBURST + 1 );
-
+    
+    nextActivate = MAX( nextActivate, GetEventQueue()->GetCurrentCycle() + p->tCAS + p->tBURST);
+    nextCompute = MAX( nextActivate, GetEventQueue()->GetCurrentCycle() + p->tCAS + p->tBURST);
     //dataCycles += p->tBURST;
     //request->type =READ;
     GetEventQueue( )->InsertEvent( EventResponse, this, request, 
@@ -909,6 +919,8 @@ bool SubArray::PostRead( NVMainRequest *request)
                             + MAX( p->tBURST, p->tCCD ) * 2
                             + p->tCAS + p->tAL + p->tBURST + 1);
 
+    nextActivate = MAX( nextActivate, GetEventQueue()->GetCurrentCycle() + p->tCAS + p->tBURST*2);
+    nextCompute = MAX( nextActivate, GetEventQueue()->GetCurrentCycle() + p->tCAS + p->tBURST*2);
     //dataCycles += p->tBURST;
     //request->type =READ;
     GetEventQueue( )->InsertEvent( EventResponse, this, request, 
@@ -980,6 +992,8 @@ bool SubArray::WriteCycle( NVMainRequest *request)
 
     //dataCycles += p->tBURST;
     //request->type =READ;
+    nextActivate = MAX( nextActivate, GetEventQueue()->GetCurrentCycle() + p->tCAS + p->tBURST + decLat );
+    nextCompute = MAX( nextActivate, GetEventQueue()->GetCurrentCycle() + p->tCAS + p->tBURST + decLat);
     GetEventQueue( )->InsertEvent( EventResponse, this, request, 
             GetEventQueue()->GetCurrentCycle() + p->tCAS + p->tBURST + decLat );
     
