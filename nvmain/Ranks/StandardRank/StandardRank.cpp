@@ -673,11 +673,22 @@ bool StandardRank::Compute( NVMainRequest *request )
 {
     std::cout << "rec compute command in rank*****" << std::endl;
 
-    compute_flag = false;
-    readcycle_flag = false;
-    realcompute_flag = false;
-    postread_flag = false;
-    writecycle_flag = false;
+    if(request->isBuffer)
+    {
+        compute_flag = true;
+        readcycle_flag = true;
+        realcompute_flag = false;
+        postread_flag = false;
+        writecycle_flag = false; 
+    }
+    else
+    {
+        compute_flag = false;
+        readcycle_flag = false;
+        realcompute_flag = false;
+        postread_flag = false;
+        writecycle_flag = false;
+    }
 
     GetEventQueue( )->InsertEvent( EventResponse, this, request, GetEventQueue()->GetCurrentCycle() + 1);
     std::cout << "rec compute command in rank*****" << std::endl;

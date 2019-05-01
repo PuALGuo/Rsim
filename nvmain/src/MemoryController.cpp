@@ -903,6 +903,21 @@ unsigned int MemoryController::GetID( )
 {
     return this->id;
 }
+NVMainRequest *MemoryController::MakeComputeRequest( NVMainRequest *triggerRequest )
+{
+    assert( triggerRequest->type == COMPUTE );
+
+    NVMainRequest *tmp = new NVMainRequest( );
+
+    tmp->type = COMPUTE;
+    tmp->issueCycle = GetEventQueue()->GetCurrentCycle();
+    tmp->address = triggerRequest->address;
+    tmp->owner = this;
+    tmp->isBuffer = triggerRequest->isBuffer;
+    tmp->Buffer_n = triggerRequest->Buffer_n;
+
+    return tmp;
+}
 NVMainRequest *MemoryController::MakeReadCycleRequest( NVMainRequest *triggerRequest )
 {
     assert( triggerRequest->type == COMPUTE );
@@ -1686,6 +1701,9 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
 
             if ( req->type == COMPUTE )
             {
+                req->Cycle_n = 0;
+                req->Buffer_n = 4;
+
                 NVMainRequest *rcRequest = MakeReadCycleRequest( req );
                 //flags need setting ??
                 commandQueues[queueId].push_back( rcRequest );
@@ -1698,6 +1716,8 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
 
                 NVMainRequest *wcRequest = MakeWriteCycleRequest( req );
                 commandQueues[queueId].push_back( wcRequest );
+
+                req->isBuffer = true;
             }
 
             commandQueues[queueId].push_back( req );
@@ -1730,6 +1750,9 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
 
         if ( req->type == COMPUTE )
         {
+            req->Cycle_n = 0;
+            req->Buffer_n = 4;
+            
             NVMainRequest *rcRequest = MakeReadCycleRequest( req );
             //flags need setting ??
             commandQueues[queueId].push_back( rcRequest );
@@ -1742,6 +1765,8 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
 
             NVMainRequest *wcRequest = MakeWriteCycleRequest( req );
             commandQueues[queueId].push_back( wcRequest );
+
+            req->isBuffer = true;
         }
 
         commandQueues[queueId].push_back( req );
@@ -1796,6 +1821,9 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
         {
             if ( req->type == COMPUTE )
             {
+                req->Cycle_n = 0;
+                req->Buffer_n = 4;
+
                 NVMainRequest *rcRequest = MakeReadCycleRequest( req );
                 //flags need setting ??
                 commandQueues[queueId].push_back( rcRequest );
@@ -1808,6 +1836,8 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
 
                 NVMainRequest *wcRequest = MakeWriteCycleRequest( req );
                 commandQueues[queueId].push_back( wcRequest );
+
+                req->isBuffer = true;
             }    
             
             commandQueues[queueId].push_back( req );
@@ -1867,6 +1897,45 @@ void MemoryController::CycleCommandQueues( )
                          << queueHead->address.GetPhysicalAddress()
                          << std::dec << " for queue " << queueId << std::endl;
             //std::cout << "test for queueId " << queueId << std::endl;
+
+            if( queueHead->type == COMPUTE )
+            {
+                if ( queueHead->Buffer_n > 1 )
+                {
+                    commandQueues[queueId].pop_front();
+                    commandQueues[queueId].push_front(MakeComputeRequest( queueHead ));
+
+                    /*
+                    queueHead->Cycle_n++;
+                    //if( queueHead->Cycle_n = p->DeviceWidth*8 / globalparams.BitWidth )
+                    if( queueHead->Cycle_n == 2)
+                    {
+                        queueHead->address.SetPhysicalAddress( queueHead->address.GetPhysicalAddress() + 1 );
+                        NVMainRequest *rcRequest = MakeReadCycleRequest( queueHead );
+                        //flags need setting ??
+                        commandQueues[queueId].push_back( rcRequest );
+                        queueHead->Cycle_n = 0;
+                    }
+                    */
+                    
+                    NVMainRequest *cRequest = MakeRealComputeRequest( queueHead );
+                    commandQueues[queueId].push_back( cRequest );
+            
+                    NVMainRequest *prRequest = MakePostReadRequest( queueHead );
+                    commandQueues[queueId].push_back( prRequest );
+
+                    NVMainRequest *wcRequest = MakeWriteCycleRequest( queueHead );
+                    commandQueues[queueId].push_back( wcRequest );
+
+                    queueHead->Buffer_n--;
+                    commandQueues[queueId].push_back(queueHead);
+                    queueHead = commandQueues[queueId].at( 0 );
+                }    
+                else
+                {
+                    queueHead->isBuffer = false;
+                }
+            }
 
             GetChild( )->IssueCommand( queueHead );
 

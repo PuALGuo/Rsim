@@ -183,6 +183,7 @@ class MemoryController : public NVMObject
     NVMainRequest *MakeRealComputeRequest( NVMainRequest *triggerRequest );
     NVMainRequest *MakePostReadRequest( NVMainRequest *triggerRequest );
     NVMainRequest *MakeWriteCycleRequest( NVMainRequest *triggerRequest );
+    NVMainRequest *MakeComputeRequest( NVMainRequest *triggerRequest );
 
     bool FindStarvedRequest( std::list<NVMainRequest *>& transactionQueue, NVMainRequest **starvedRequest );
     bool FindCachedAddress( std::list<NVMainRequest *>& transactionQueue, NVMainRequest **accessibleRequest );

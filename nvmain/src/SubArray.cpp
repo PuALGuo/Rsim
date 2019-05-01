@@ -948,12 +948,14 @@ bool SubArray::WriteCycle( NVMainRequest *request)
             << std::endl;
         return false;
     }
+    /*
     else if( state != SUBARRAY_OPEN )
     {
         std::cerr << "NVMain Error: try to read a subarray that is not active!"
             << std::endl;
         return false;
     }
+    */
     /*
     else if( readRow != openRow )
     {
