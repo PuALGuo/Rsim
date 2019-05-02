@@ -915,6 +915,8 @@ NVMainRequest *MemoryController::MakeComputeRequest( NVMainRequest *triggerReque
     tmp->owner = this;
     tmp->isBuffer = triggerRequest->isBuffer;
     tmp->Buffer_n = triggerRequest->Buffer_n;
+    tmp->rowIntr = triggerRequest->rowIntr;
+    tmp->slide = triggerRequest->slide;
 
     return tmp;
 }
@@ -928,6 +930,10 @@ NVMainRequest *MemoryController::MakeReadCycleRequest( NVMainRequest *triggerReq
     rcRequest->issueCycle = GetEventQueue()->GetCurrentCycle();
     rcRequest->address = triggerRequest->address;
     rcRequest->owner = this;
+    rcRequest->isBuffer = triggerRequest->isBuffer;
+    rcRequest->Buffer_n = triggerRequest->Buffer_n;
+    rcRequest->rowIntr = triggerRequest->rowIntr;
+    rcRequest->slide = triggerRequest->slide;
 
     return rcRequest;
 }
@@ -942,6 +948,10 @@ NVMainRequest *MemoryController::MakeRealComputeRequest( NVMainRequest *triggerR
     cRequest->issueCycle = GetEventQueue()->GetCurrentCycle();
     cRequest->address = triggerRequest->address;
     cRequest->owner = this;
+    cRequest->isBuffer = triggerRequest->isBuffer;
+    cRequest->Buffer_n = triggerRequest->Buffer_n;
+    cRequest->rowIntr = triggerRequest->rowIntr;
+    cRequest->slide = triggerRequest->slide;
 
     return cRequest;    
 }
@@ -956,6 +966,10 @@ NVMainRequest *MemoryController::MakePostReadRequest( NVMainRequest *triggerRequ
     prRequest->issueCycle = GetEventQueue()->GetCurrentCycle();
     prRequest->address = triggerRequest->address;
     prRequest->owner = this;
+    prRequest->isBuffer = triggerRequest->isBuffer;
+    prRequest->Buffer_n = triggerRequest->Buffer_n;
+    prRequest->rowIntr = triggerRequest->rowIntr;
+    prRequest->slide = triggerRequest->slide;
 
     return prRequest;    
 }
@@ -969,8 +983,12 @@ NVMainRequest *MemoryController::MakeWriteCycleRequest( NVMainRequest *triggerRe
     wcRequest->type = WRITECYCLE;
     wcRequest->issueCycle = GetEventQueue()->GetCurrentCycle();
     wcRequest->address = triggerRequest->address;
-    wcRequest->address = globalparams.Output_Addr;
+    //wcRequest->address = globalparams.Output_Addr;
     wcRequest->owner = this;
+    wcRequest->isBuffer = triggerRequest->isBuffer;
+    wcRequest->Buffer_n = triggerRequest->Buffer_n;
+    wcRequest->rowIntr = triggerRequest->rowIntr;
+    wcRequest->slide = triggerRequest->slide;
 
     return wcRequest;    
 }
@@ -1703,6 +1721,10 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
             {
                 req->Cycle_n = 0;
                 req->Buffer_n = 4;
+                req->row = 1;
+                req->col = 1;
+                req->rowIntr = false;
+                req->slide = globalparams.slide;
 
                 NVMainRequest *rcRequest = MakeReadCycleRequest( req );
                 //flags need setting ??
@@ -1752,6 +1774,8 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
         {
             req->Cycle_n = 0;
             req->Buffer_n = 4;
+            req->rowIntr = false;
+            req->slide = globalparams.slide;
             
             NVMainRequest *rcRequest = MakeReadCycleRequest( req );
             //flags need setting ??
@@ -1823,7 +1847,9 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
             {
                 req->Cycle_n = 0;
                 req->Buffer_n = 4;
-
+                req->rowIntr = false;
+                req->slide = globalparams.slide;
+                
                 NVMainRequest *rcRequest = MakeReadCycleRequest( req );
                 //flags need setting ??
                 commandQueues[queueId].push_back( rcRequest );
@@ -1931,9 +1957,58 @@ void MemoryController::CycleCommandQueues( )
                     commandQueues[queueId].push_back(queueHead);
                     queueHead = commandQueues[queueId].at( 0 );
                 }    
-                else
+                else if(queueHead->slide = X)
                 {
                     queueHead->isBuffer = false;
+                    queueHead->col = queueHead->col + 2;
+                    ncounter_t rank, bank, row, subarray, col, channal;
+                    queueHead->address.GetTranslatedAddress( &row, &col, &bank, &rank, &channal, &subarray );
+                    if ( !queueHead->rowIntr )
+                        col = col + 2;
+                    else
+                    {
+                        col = col - p->COLS;
+                        row++ ;
+                        if( row = p->ROWS )
+                        {
+                            std::cout<<" wrong command: load data from different bank " << std::endl;
+                            assert(row < p->ROWS);
+                        }
+                    }
+                    queueHead->address.SetTranslatedAddress( row, col, bank, rank, channal, subarray );
+                    
+                    if( queueHead->col > globalparams.Input_Col )
+                    {
+                        queueHead->col = 0;
+                        queueHead->row += 1;
+                    }
+                    if( queueHead->row <= globalparams.Input_Row )
+                    {
+                        commandQueues[queueId].pop_front();
+                        commandQueues[queueId].push_front(MakeComputeRequest( queueHead ));
+                        queueHead->Buffer_n = 4;
+                        if(( queueHead->col + queueHead->Buffer_n / 2 ) > globalparams.Input_Col)
+                            queueHead->Buffer_n = 2*(globalparams.Input_Row - queueHead->row + 1);
+                        
+                        if((col + queueHead->Buffer_n / 2) >= p->COLS)
+                            queueHead->rowIntr = true;
+                        else
+                            queueHead->rowIntr = false;
+
+                        commandQueues[queueId].push_back(MakeActivateRequest( queueHead ));
+                        commandQueues[queueId].push_back(MakeReadCycleRequest( queueHead ));
+                        commandQueues[queueId].push_back(MakeRealComputeRequest( queueHead ));
+                        commandQueues[queueId].push_back(MakePostReadRequest( queueHead ));
+                        commandQueues[queueId].push_back(MakeWriteCycleRequest( queueHead ));
+
+                        queueHead->isBuffer = true;
+                        commandQueues[queueId].push_back(queueHead);
+                        queueHead = commandQueues[queueId].at( 0 );
+                    }
+                }
+                else if(queueHead->slide = Y)
+                {
+
                 }
             }
 
@@ -2073,7 +2148,7 @@ ncycle_t MemoryController::NextIssuable( NVMainRequest * /*request*/ )
                 continue;
 
             NVMainRequest *queueHead = commandQueues[queueIdx].at( 0 );
-            //std::cout << "memctr next" << nextWakeup << std::endl;
+            std::cout << "memctr next" << nextWakeup << std::endl;
             nextWakeup = MIN( nextWakeup, GetChild( )->NextIssuable( queueHead ) );
         }
     }

@@ -1401,7 +1401,7 @@ ncycle_t SubArray::NextIssuable( NVMainRequest *request )
     else if( request->type == READCYCLE || request->type == REALCOMPUTE || request->type == POSTREAD || request->type == WRITECYCLE || request->type == COMPUTE ) nextCompare = nextCompute;
     else assert(false);
 
-    //std::cout << "sub next " << nextCompare << std::endl;
+    std::cout << "sub next " << nextCompare << std::endl;
     // Should have no children
     return nextCompare;
 }

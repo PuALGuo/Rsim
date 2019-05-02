@@ -961,7 +961,7 @@ ncycle_t DDR3Bank::NextIssuable( NVMainRequest *request )
     else if( request->type == READCYCLE || request->type == REALCOMPUTE || request->type == POSTREAD || request->type == WRITECYCLE || request->type == COMPUTE ) nextCompare = MAX( nextRead, nextWrite );
     else assert(false);
 
-    //std::cout << "bank next" << nextCompare << std::endl;
+    std::cout << "bank next" << nextCompare << std::endl;
     return MAX(GetChild( request )->NextIssuable( request ), nextCompare );
 }
 

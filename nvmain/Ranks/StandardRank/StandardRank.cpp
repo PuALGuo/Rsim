@@ -518,6 +518,7 @@ bool StandardRank::LoadWeight( NVMainRequest *request )
 
     bool success = GetChild( request )->IssueCommand( request );
 
+    /*
     nextRead = MAX( nextRead, 
                     GetEventQueue()->GetCurrentCycle() 
                     + MAX( p->tBURST, p->tCCD ) * (request->burstCount - 1)
@@ -526,6 +527,7 @@ bool StandardRank::LoadWeight( NVMainRequest *request )
     nextWrite = MAX( nextWrite, 
                      GetEventQueue()->GetCurrentCycle() 
                      + MAX( p->tBURST, p->tCCD ) * request->burstCount );
+    */
     
     if( success == false )
     {
@@ -561,6 +563,7 @@ bool StandardRank::ReadCycle( NVMainRequest *request )
 
     bool success = GetChild( request )->IssueCommand( request );
 
+    /*
     nextRead = MAX( nextRead, 
                     GetEventQueue()->GetCurrentCycle() 
                     + MAX( p->tBURST, p->tCCD ) * (request->burstCount - 1)
@@ -569,6 +572,7 @@ bool StandardRank::ReadCycle( NVMainRequest *request )
     nextWrite = MAX( nextWrite, 
                      GetEventQueue()->GetCurrentCycle() 
                      + MAX( p->tBURST, p->tCCD ) * request->burstCount );
+    */
     
     if( success == false )
     {
@@ -585,6 +589,7 @@ bool StandardRank::RealCompute( NVMainRequest *request )
 
     bool success = GetChild( request )->IssueCommand( request );
 
+    /*
     nextRead = MAX( nextRead, 
                     GetEventQueue()->GetCurrentCycle() 
                     + MAX( p->tBURST, p->tCCD ) * (request->burstCount - 1)
@@ -593,7 +598,8 @@ bool StandardRank::RealCompute( NVMainRequest *request )
     nextWrite = MAX( nextWrite, 
                      GetEventQueue()->GetCurrentCycle() 
                      + MAX( p->tBURST, p->tCCD ) * request->burstCount );
-    
+    */
+
     if( success == false )
     {
         std::cerr << "NVMain Error: Rank Write FAILED! Did you check IsIssuable?" 
@@ -609,6 +615,7 @@ bool StandardRank::PostRead( NVMainRequest *request )
 
     bool success = GetChild( request )->IssueCommand( request );
 
+    /*
     nextRead = MAX( nextRead, 
                     GetEventQueue()->GetCurrentCycle() 
                     + MAX( p->tBURST, p->tCCD ) * (request->burstCount - 1)
@@ -617,7 +624,8 @@ bool StandardRank::PostRead( NVMainRequest *request )
     nextWrite = MAX( nextWrite, 
                      GetEventQueue()->GetCurrentCycle() 
                      + MAX( p->tBURST, p->tCCD ) * request->burstCount );
-    
+    */
+
     if( success == false )
     {
         std::cerr << "NVMain Error: Rank Write FAILED! Did you check IsIssuable?" 
@@ -651,6 +659,7 @@ bool StandardRank::WriteCycle( NVMainRequest *request )
 
     bool success = GetChild( request )->IssueCommand( request );
 
+    /*
     nextRead = MAX( nextRead, 
                     GetEventQueue()->GetCurrentCycle() 
                     + MAX( p->tBURST, p->tCCD ) * (request->burstCount - 1)
@@ -659,7 +668,8 @@ bool StandardRank::WriteCycle( NVMainRequest *request )
     nextWrite = MAX( nextWrite, 
                      GetEventQueue()->GetCurrentCycle() 
                      + MAX( p->tBURST, p->tCCD ) * request->burstCount );
-    
+    */
+   
     if( success == false )
     {
         std::cerr << "NVMain Error: Rank Write FAILED! Did you check IsIssuable?" 
@@ -916,7 +926,7 @@ ncycle_t StandardRank::NextIssuable( NVMainRequest *request )
     else if( request->type == READCYCLE || request->type == REALCOMPUTE || request->type == POSTREAD || request->type == WRITECYCLE || request->type == COMPUTE ) nextCompare = MAX( nextRead, nextWrite );
     else assert(false);
         
-    //std::cout << "rank next " << nextCompare << std::endl;
+    std::cout << "rank next " << nextCompare << std::endl;
     return MAX(GetChild( request )->NextIssuable( request ), nextCompare );
 }
 

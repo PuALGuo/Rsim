@@ -166,10 +166,14 @@ class NVMainRequest
     ncounter_t burstCount;         //< Number of bursts (used for variable-size requests.
     NVMObject *owner;              //< Pointer to the object that created this request
 
-    bool isBuffer;
+    bool isBuffer = false;
     uint64_t Buffer_n;
     uint64_t Cycle_n;
-    
+    bool rowIntr = false;
+    bool slide;                    //< 1 for row-first, 0 for col-first;
+    uint64_t row;
+    uint64_t col;
+
     ncycle_t arrivalCycle;         //< When the request arrived at the memory controller
     ncycle_t queueCycle;           //< When the memory controller accepted (queued) the request
     ncycle_t issueCycle;           //< When the memory controller issued the request to the interconnect (dequeued)
