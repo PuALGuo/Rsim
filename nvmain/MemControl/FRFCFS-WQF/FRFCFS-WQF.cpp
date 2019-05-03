@@ -540,16 +540,18 @@ void FRFCFS_WQF::Cycle( ncycle_t steps )
         if( FindLoadRequest( *loadQueue, &nextRequest ) )
         {
             IssueMemoryCommands( nextRequest );
-            std::cout << "olleh?" << std::endl;
+            //std::cout << "olleh?" << std::endl;
         }
         else if ( FindComputeRequest( *computeQueue, &nextRequest ) )
         {
             IssueMemoryCommands( nextRequest );
-            std::cout << "olleh???" << std::endl;
+            //std::cout << "olleh???" << std::endl;
         }
         else
-            std::cout << "hello?" << std::endl;
-        std::cout << "hello ? hool " << std::endl;
+        {
+            //std::cout << "hello?" << std::endl;
+        }
+        //std::cout << "hello ? hool " << std::endl;
     }
     /* Issue memory commands from the command queue. */
     CycleCommandQueues( );

@@ -926,7 +926,7 @@ ncycle_t StandardRank::NextIssuable( NVMainRequest *request )
     else if( request->type == READCYCLE || request->type == REALCOMPUTE || request->type == POSTREAD || request->type == WRITECYCLE || request->type == COMPUTE ) nextCompare = MAX( nextRead, nextWrite );
     else assert(false);
         
-    std::cout << "rank next " << nextCompare << std::endl;
+    //std::cout << "rank next " << nextCompare << std::endl;
     return MAX(GetChild( request )->NextIssuable( request ), nextCompare );
 }
 
@@ -959,7 +959,7 @@ bool StandardRank::IsIssuable( NVMainRequest *req, FailReason *reason )
                 > GetEventQueue()->GetCurrentCycle() )  
         {
             rv = false;
-            std::cout << "last" << lastActivate[(RAWindex + 1) % rawNum] + p->tRAW << std::endl;
+            //std::cout << "last" << lastActivate[(RAWindex + 1) % rawNum] + p->tRAW << std::endl;
             if( reason ) 
                 reason->reason = RANK_TIMING;
         }

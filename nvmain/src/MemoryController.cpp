@@ -296,7 +296,7 @@ void MemoryController::CleanupCallback( void * /*data*/ )
     for( ncycle_t queueId = 0; queueId < commandQueueCount; queueId++ )
     {
         /* Remove issued requests from the command queue. */
-        std::cout << "i do the cleanup " << std::endl;
+        //std::cout << "i do the cleanup " << std::endl;
         commandQueues[queueId].erase(
             std::remove_if( commandQueues[queueId].begin(), 
                             commandQueues[queueId].end(), 
@@ -2037,7 +2037,7 @@ void MemoryController::CycleCommandQueues( )
                         queueHead->row = queueHead->row + 1;
                         
                         ncounter_t rank, bank, row, subarray, col, channel;
-                        queueHead->address.GetTranslatedAddress( &row, &col, &bank, &rank, &channel, &subarray );
+                        globalparams.Input_Addr.GetTranslatedAddress( &row, &col, &bank, &rank, &channel, &subarray );
                         col = col + (queueHead->row - 1)*globalparams.Input_Row;
                         while (col>=p->COLS)
                         {
@@ -2084,7 +2084,97 @@ void MemoryController::CycleCommandQueues( )
                 }
                 else if(queueHead->slide == Y)
                 {
+                    if(!queueHead->RowComplete)
+                    {
+                        queueHead->isBuffer = false;
+                        commandQueues[queueId].pop_front();
+                        commandQueues[queueId].push_front(MakeComputeRequest( queueHead ));
 
+                        queueHead->row++;
+                        queueHead->Buffer_n = queueHead->BufferSize;
+                        std::cout << "buffer_n is " << queueHead->Buffer_n << std::endl;
+
+                        ncounter_t rank, bank, row, subarray, col, channel;
+                        globalparams.Input_Addr.GetTranslatedAddress( &row, &col, &bank, &rank, &channel, &subarray );
+                        col = col + (queueHead->row - 1)*globalparams.Input_Row + queueHead->col - 1;
+                        while (col >=p->COLS)
+                        {
+                            col = col - p->COLS;
+                            row++;
+                            if( row == p->ROWS)
+                            {
+                                std::cout<<" wrong command: load data from different bank " << std::endl;
+                                assert(row < p->ROWS);
+                            }
+                        }
+                        std::cout << " now is col " << col << " row " << row << std::endl;
+                        queueHead->address.SetTranslatedAddress( row, col, bank, rank, channel, subarray );
+
+                        if(( queueHead->row + globalparams.K_Row - 1 ) >= globalparams.Input_Row)
+                        {
+                            queueHead->RowComplete = true;
+                        }
+                        
+                        commandQueues[queueId].push_back(MakeActivateRequest( queueHead ));
+                        commandQueues[queueId].push_back(MakeReadCycleRequest( queueHead ));
+                        commandQueues[queueId].push_back(MakeRealComputeRequest( queueHead ));
+                        commandQueues[queueId].push_back(MakePostReadRequest( queueHead ));
+                        commandQueues[queueId].push_back(MakeWriteCycleRequest( queueHead ));
+
+                        queueHead->isBuffer = true;
+                        commandQueues[queueId].push_back(queueHead);
+                        queueHead = commandQueues[queueId].at( 0 );
+                    }
+                    else if(!queueHead->ColComplete)
+                    {
+                        queueHead->RowComplete = false;
+                        queueHead->isBuffer = false;
+                        queueHead->col = queueHead->col + queueHead->BufferSize / 2;
+                        queueHead->row = 1;
+                        
+                        commandQueues[queueId].pop_front();
+                        commandQueues[queueId].push_front(MakeComputeRequest( queueHead ));
+
+                        ncounter_t rank, bank, row, subarray, col, channel;
+                        globalparams.Input_Addr.GetTranslatedAddress( &row, &col, &bank, &rank, &channel, &subarray );
+                        col = col + (queueHead->row - 1)*globalparams.Input_Row + queueHead->col - 1;
+                        while (col>=p->COLS)
+                        {
+                            col = col - p->COLS;
+                            row++;
+                            if( row == p->ROWS)
+                            {
+                                std::cout<<" wrong command: load data from different bank " << std::endl;
+                                assert(row < p->ROWS);
+                            }
+                        }
+                        queueHead->address.SetTranslatedAddress( row, col, bank, rank, channel, subarray );
+                        std::cout << " now is col " << col << " row " << row << std::endl;
+                        queueHead->BufferSize = globalparams.Buffer_n;
+                        if(( queueHead->col + queueHead->BufferSize / 2 + globalparams.K_Col - 2) >= globalparams.Input_Col)
+                        {
+                            queueHead->BufferSize = 2*(globalparams.Input_Row - queueHead->col + 2 - globalparams.K_Col);
+                            queueHead->ColComplete = true;
+                        }
+                        queueHead->Buffer_n = queueHead->BufferSize;
+                        std::cout << "buffer is " << queueHead->Buffer_n << std::endl;
+
+                        commandQueues[queueId].push_back(MakeActivateRequest( queueHead ));
+                        commandQueues[queueId].push_back(MakeReadCycleRequest( queueHead ));
+                        commandQueues[queueId].push_back(MakeRealComputeRequest( queueHead ));
+                        commandQueues[queueId].push_back(MakePostReadRequest( queueHead ));
+                        commandQueues[queueId].push_back(MakeWriteCycleRequest( queueHead ));
+
+                        queueHead->isBuffer = true;
+                        commandQueues[queueId].push_back(queueHead);
+                        queueHead = commandQueues[queueId].at( 0 );
+                    }
+                    else
+                    {
+                        assert(queueHead->ColComplete);
+                        queueHead->isBuffer = false;
+                    }
+                    
                 }
             }
 
@@ -2224,7 +2314,7 @@ ncycle_t MemoryController::NextIssuable( NVMainRequest * /*request*/ )
                 continue;
 
             NVMainRequest *queueHead = commandQueues[queueIdx].at( 0 );
-            std::cout << "memctr next" << nextWakeup << std::endl;
+            //std::cout << "memctr next" << nextWakeup << std::endl;
             nextWakeup = MIN( nextWakeup, GetChild( )->NextIssuable( queueHead ) );
         }
     }

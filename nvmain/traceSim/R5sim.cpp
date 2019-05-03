@@ -77,7 +77,7 @@ int main()
 					{
 						std::cout << "I send a load command" << std::endl;
 						//risc5sim->IssueCommand( 384+command, 'L', 12312, 0);
-						risc5sim->IssueCommand( 0, 0, 'C', 11, 'X');
+						risc5sim->IssueCommand( 0, 0, 'C', 11, 'Y');
 						command++;
 					}
 					else
@@ -228,7 +228,7 @@ void R5sim::Cycle( ncycle_t steps )
 	for ( uint64_t i=1 ; i <= steps ; i++ )
 		if ( outstandingRequests > 0 ) 
 		{
-			std::cout << " now it is " << currentCycle << std::endl;
+			//std::cout << " now it is " << currentCycle << std::endl;
 			globalEventQueue->Cycle( 1 );
 			currentCycle++;
 			
