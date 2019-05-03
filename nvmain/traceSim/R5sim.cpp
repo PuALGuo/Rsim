@@ -71,13 +71,13 @@ int main()
 			std::cin >> conti;
 			if ((conti == 'Y') || (conti == 'y'))
 			{
-				if(risc5sim->IsIssuable( 384, 'L', 12312, 0 ))
+				if(risc5sim->IsIssuable( 0, 0, 'C', 11, 'X'))
 				{
 					if(command < 1)
 					{
 						std::cout << "I send a load command" << std::endl;
 						//risc5sim->IssueCommand( 384+command, 'L', 12312, 0);
-						risc5sim->IssueCommand( 384, 191991292, 'C', 12331, 'X');
+						risc5sim->IssueCommand( 0, 0, 'C', 11, 'X');
 						command++;
 					}
 					else
@@ -90,7 +90,7 @@ int main()
 					std::cout << "the queue is full" << std::endl;
 				}
 
-				risc5sim->Cycle(100);
+				risc5sim->Cycle(200);
 			}
 		}
         std::cout << "All is done" << std::endl ;
@@ -128,8 +128,8 @@ bool R5sim::setP( )
 	{
 		//std::cout<< "test " << std::endl;
 		globalparams.Func_n = 0;
-    	globalparams.Input_Row = 4; //28;
-    	globalparams.Input_Col = 4; //28;
+    	globalparams.Input_Row = 5; //28;
+    	globalparams.Input_Col = 5; //28;
     	globalparams.Input_Channel = 3;
     	globalparams.BitWidth = 4;
     	globalparams.K_Row = 3;
@@ -140,6 +140,7 @@ bool R5sim::setP( )
     	globalparams.Weight_Width = 8;
     	globalparams.act_mode = ACT_RELU;
     	globalparams.pooling_mode = Pooling_Max;
+		globalparams.Buffer_n = 4;
 
 		//globalparams.Input_Addr.SetPhysicalAddress(0);
 		//globalparams.Output_Addr.SetPhysicalAddress(100000000);
@@ -346,7 +347,10 @@ bool R5sim::IssueCommand( uint64_t addr, char opt, uint64_t data, uint64_t threa
 	else if ( opt == 'L')
 		request->type = LOAD_WEIGHT;
 	else if ( opt == 'C')
+	{
+		request->BufferSize = globalparams.Buffer_n;
 		request->type = COMPUTE;
+	}
 	else 
 		std::cout << "Warning: Unknown operation '" << opt << "'" << std::endl;
 	

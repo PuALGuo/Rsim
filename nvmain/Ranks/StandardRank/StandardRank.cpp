@@ -1147,7 +1147,7 @@ bool StandardRank::IsIssuable( NVMainRequest *req, FailReason *reason )
         if( !realcompute_flag )
         {
             rv = false;
-            std::cout << "readcycle is not completed*****" << std::endl;
+            std::cout << "realcompute is not completed*****" << std::endl;
             if( reason )
                 reason->reason = RANK_TIMING;
         } 
@@ -1184,7 +1184,7 @@ bool StandardRank::IsIssuable( NVMainRequest *req, FailReason *reason )
         if( !writecycle_flag )
         {
             rv = false;
-            std::cout << "postread is not completed*****" << std::endl;
+            std::cout << "writecycle is not completed*****" << std::endl;
             if( reason )
                 reason->reason = RANK_TIMING;
         }

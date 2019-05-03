@@ -88,6 +88,7 @@ class GlobalParams{
     ACT act_mode;
     Pooling pooling_mode;
     bool isUsing;
+    uint64_t Buffer_n;
     
     NVMAddress Input_Addr;
     NVMAddress Output_Addr;

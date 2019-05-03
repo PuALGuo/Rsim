@@ -173,7 +173,10 @@ class NVMainRequest
     bool slide;                    //< 1 for row-first, 0 for col-first;
     uint64_t row;
     uint64_t col;
-
+    uint64_t BufferSize;
+    bool RowComplete = false;
+    bool ColComplete = false;
+    
     ncycle_t arrivalCycle;         //< When the request arrived at the memory controller
     ncycle_t queueCycle;           //< When the memory controller accepted (queued) the request
     ncycle_t issueCycle;           //< When the memory controller issued the request to the interconnect (dequeued)

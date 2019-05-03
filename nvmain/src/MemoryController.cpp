@@ -917,6 +917,7 @@ NVMainRequest *MemoryController::MakeComputeRequest( NVMainRequest *triggerReque
     tmp->Buffer_n = triggerRequest->Buffer_n;
     tmp->rowIntr = triggerRequest->rowIntr;
     tmp->slide = triggerRequest->slide;
+    tmp->BufferSize = triggerRequest->BufferSize;
 
     return tmp;
 }
@@ -934,6 +935,7 @@ NVMainRequest *MemoryController::MakeReadCycleRequest( NVMainRequest *triggerReq
     rcRequest->Buffer_n = triggerRequest->Buffer_n;
     rcRequest->rowIntr = triggerRequest->rowIntr;
     rcRequest->slide = triggerRequest->slide;
+    rcRequest->BufferSize = triggerRequest->BufferSize;
 
     return rcRequest;
 }
@@ -952,6 +954,7 @@ NVMainRequest *MemoryController::MakeRealComputeRequest( NVMainRequest *triggerR
     cRequest->Buffer_n = triggerRequest->Buffer_n;
     cRequest->rowIntr = triggerRequest->rowIntr;
     cRequest->slide = triggerRequest->slide;
+    cRequest->BufferSize = triggerRequest->BufferSize;
 
     return cRequest;    
 }
@@ -970,6 +973,7 @@ NVMainRequest *MemoryController::MakePostReadRequest( NVMainRequest *triggerRequ
     prRequest->Buffer_n = triggerRequest->Buffer_n;
     prRequest->rowIntr = triggerRequest->rowIntr;
     prRequest->slide = triggerRequest->slide;
+    prRequest->BufferSize = triggerRequest->BufferSize;
 
     return prRequest;    
 }
@@ -989,6 +993,7 @@ NVMainRequest *MemoryController::MakeWriteCycleRequest( NVMainRequest *triggerRe
     wcRequest->Buffer_n = triggerRequest->Buffer_n;
     wcRequest->rowIntr = triggerRequest->rowIntr;
     wcRequest->slide = triggerRequest->slide;
+    wcRequest->BufferSize = triggerRequest->BufferSize;
 
     return wcRequest;    
 }
@@ -1720,7 +1725,7 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
             if ( req->type == COMPUTE )
             {
                 req->Cycle_n = 0;
-                req->Buffer_n = 4;
+                req->Buffer_n = req->BufferSize;
                 req->row = 1;
                 req->col = 1;
                 req->rowIntr = false;
@@ -1773,7 +1778,7 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
         if ( req->type == COMPUTE )
         {
             req->Cycle_n = 0;
-            req->Buffer_n = 4;
+            req->Buffer_n = req->BufferSize;
             req->rowIntr = false;
             req->slide = globalparams.slide;
             
@@ -1846,7 +1851,7 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
             if ( req->type == COMPUTE )
             {
                 req->Cycle_n = 0;
-                req->Buffer_n = 4;
+                req->Buffer_n = req->BufferSize;
                 req->rowIntr = false;
                 req->slide = globalparams.slide;
                 
@@ -1957,44 +1962,63 @@ void MemoryController::CycleCommandQueues( )
                     commandQueues[queueId].push_back(queueHead);
                     queueHead = commandQueues[queueId].at( 0 );
                 }    
-                else if(queueHead->slide = X)
+                else if(queueHead->slide == X)
                 {
-                    queueHead->isBuffer = false;
-                    queueHead->col = queueHead->col + 2;
-                    ncounter_t rank, bank, row, subarray, col, channal;
-                    queueHead->address.GetTranslatedAddress( &row, &col, &bank, &rank, &channal, &subarray );
-                    if ( !queueHead->rowIntr )
-                        col = col + 2;
-                    else
+                    if(!queueHead->ColComplete)
                     {
-                        col = col - p->COLS;
-                        row++ ;
-                        if( row = p->ROWS )
-                        {
-                            std::cout<<" wrong command: load data from different bank " << std::endl;
-                            assert(row < p->ROWS);
-                        }
-                    }
-                    queueHead->address.SetTranslatedAddress( row, col, bank, rank, channal, subarray );
-                    
-                    if( queueHead->col > globalparams.Input_Col )
-                    {
-                        queueHead->col = 0;
-                        queueHead->row += 1;
-                    }
-                    if( queueHead->row <= globalparams.Input_Row )
-                    {
+                        queueHead->isBuffer = false;             
                         commandQueues[queueId].pop_front();
                         commandQueues[queueId].push_front(MakeComputeRequest( queueHead ));
-                        queueHead->Buffer_n = 4;
-                        if(( queueHead->col + queueHead->Buffer_n / 2 ) > globalparams.Input_Col)
-                            queueHead->Buffer_n = 2*(globalparams.Input_Row - queueHead->row + 1);
+
+                        queueHead->col = queueHead->col + queueHead->BufferSize / 2;
+                        ncounter_t rank, bank, row, subarray, col, channel;
+                        queueHead->address.GetTranslatedAddress( &row, &col, &bank, &rank, &channel, &subarray );
                         
-                        if((col + queueHead->Buffer_n / 2) >= p->COLS)
+                        col = col + queueHead->BufferSize / 2;
+
+                        while (col >=p->COLS)
+                        {
+                            col = col - p->COLS;
+                            row++;
+                            if( row == p->ROWS)
+                            {
+                                std::cout<<" wrong command: load data from different bank " << std::endl;
+                                assert(row < p->ROWS);
+                            }
+                        }
+
+                        /*
+                        if ( !queueHead->rowIntr )
+                            col = col + queueHead->BufferSize / 2;
+                        else
+                        {
+                            col = col + queueHead->BufferSize / 2 - p->COLS;
+                            row++ ;
+                            if( row = p->ROWS )
+                            {
+                                std::cout<<" wrong command: load data from different bank " << std::endl;
+                                assert(row < p->ROWS);
+                            }
+                        }
+                        */
+                        std::cout << " now is col " << col << " row " << row << std::endl;
+                        queueHead->address.SetTranslatedAddress( row, col, bank, rank, channel, subarray );
+                        
+                        queueHead->BufferSize = globalparams.Buffer_n;
+                        if(( queueHead->col + queueHead->BufferSize / 2 + globalparams.K_Col - 2) >= globalparams.Input_Col)
+                        {
+                            queueHead->BufferSize = 2*(globalparams.Input_Row - queueHead->col + 2 - globalparams.K_Col);
+                            queueHead->ColComplete = true;
+                        }
+                        queueHead->Buffer_n = queueHead->BufferSize;
+                        std::cout << "buffer_n is " << queueHead->Buffer_n << std::endl;
+                        /*
+                        if((col + queueHead->Buffer_n / 2 + globalparams.K_Col - 1) >= p->COLS)
                             queueHead->rowIntr = true;
                         else
                             queueHead->rowIntr = false;
-
+                        */
+                        
                         commandQueues[queueId].push_back(MakeActivateRequest( queueHead ));
                         commandQueues[queueId].push_back(MakeReadCycleRequest( queueHead ));
                         commandQueues[queueId].push_back(MakeRealComputeRequest( queueHead ));
@@ -2005,8 +2029,60 @@ void MemoryController::CycleCommandQueues( )
                         commandQueues[queueId].push_back(queueHead);
                         queueHead = commandQueues[queueId].at( 0 );
                     }
+                    else if(!queueHead->RowComplete)
+                    {
+                        queueHead->ColComplete = false;
+                        queueHead->isBuffer = false;
+                        queueHead->col = 1;
+                        queueHead->row = queueHead->row + 1;
+                        
+                        ncounter_t rank, bank, row, subarray, col, channel;
+                        queueHead->address.GetTranslatedAddress( &row, &col, &bank, &rank, &channel, &subarray );
+                        col = col + (queueHead->row - 1)*globalparams.Input_Row;
+                        while (col>=p->COLS)
+                        {
+                            col = col - p->COLS;
+                            row++;
+                            if( row == p->ROWS)
+                            {
+                                std::cout<<" wrong command: load data from different bank " << std::endl;
+                                assert(row < p->ROWS);
+                            }
+                        }
+                        queueHead->address.SetTranslatedAddress( row, col, bank, rank, channel, subarray );
+
+                        commandQueues[queueId].pop_front();
+                        commandQueues[queueId].push_front(MakeComputeRequest( queueHead ));
+                        queueHead->BufferSize = globalparams.Buffer_n;
+                        if(( queueHead->col + queueHead->BufferSize / 2 + globalparams.K_Col - 2) >= globalparams.Input_Col)
+                        {
+                            queueHead->BufferSize = 2*(globalparams.Input_Row - queueHead->col + 2 - globalparams.K_Col);
+                            queueHead->ColComplete = true;
+                        }
+                        queueHead->Buffer_n = queueHead->BufferSize;
+                        std::cout << "buffer is " << queueHead->Buffer_n << std::endl;
+                        if(( queueHead->row + globalparams.K_Row - 1 ) >= globalparams.Input_Row)
+                        {
+                            queueHead->RowComplete = true;
+                        }
+                        commandQueues[queueId].push_back(MakeActivateRequest( queueHead ));
+                        commandQueues[queueId].push_back(MakeReadCycleRequest( queueHead ));
+                        commandQueues[queueId].push_back(MakeRealComputeRequest( queueHead ));
+                        commandQueues[queueId].push_back(MakePostReadRequest( queueHead ));
+                        commandQueues[queueId].push_back(MakeWriteCycleRequest( queueHead ));
+
+                        queueHead->isBuffer = true;
+                        commandQueues[queueId].push_back(queueHead);
+                        queueHead = commandQueues[queueId].at( 0 );
+                    }
+                    else
+                    {
+                        assert(queueHead->RowComplete);
+                        queueHead->isBuffer = false;
+                    }
+                    
                 }
-                else if(queueHead->slide = Y)
+                else if(queueHead->slide == Y)
                 {
 
                 }

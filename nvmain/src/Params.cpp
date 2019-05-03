@@ -58,6 +58,7 @@ GlobalParams::GlobalParams( )
     act_mode = ACT_RELU;
     pooling_mode = Pooling_Max;
     isUsing = false;
+    Buffer_n = 0;
 }
 
 GlobalParams::~GlobalParams( )
