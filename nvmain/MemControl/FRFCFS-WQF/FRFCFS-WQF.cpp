@@ -275,13 +275,17 @@ bool FRFCFS_WQF::IssueCommand( NVMainRequest *request )
     }
     else if ( request->type == LOAD_WEIGHT )
     {
-        Enqueue( loadQueueId, request );
-
+        if ( transactionQueues[loadQueueId].size() < loadQueueSize )
+        //{
+            Enqueue( loadQueueId, request );
+            //std::cout<< "*******enqueue****" << std::endl; 
+        //}
         mem_load++;
     }
     else if ( request->type == COMPUTE)
     {
-        Enqueue( computeQueueId, request );
+        if ( transactionQueues[computeQueueId].size() < computeQueueSize )
+            Enqueue( computeQueueId, request );
 
         mem_compute++;
     }

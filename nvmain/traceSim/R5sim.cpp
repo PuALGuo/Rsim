@@ -71,13 +71,21 @@ int main()
 			std::cin >> conti;
 			if ((conti == 'Y') || (conti == 'y'))
 			{
-				if(risc5sim->IsIssuable( 0, 0, 'C', 11, 'X'))
+				if(risc5sim->IsIssuable( ))
 				{
 					if(command < 1)
 					{
-						std::cout << "I send a load command" << std::endl;
-						//risc5sim->IssueCommand( 384+command, 'L', 12312, 0);
-						risc5sim->IssueCommand( 0, 0, 'C', 11, 'Y');
+						//std::cout << "I send a load command" << std::endl;
+						risc5sim->IssueCommand( 384, 'L', 12312, 0);
+						risc5sim->IssueCommand( 384, 'L', 12312, 0);
+						risc5sim->IssueCommand( 384, 'L', 12312, 0);
+						risc5sim->IssueCommand( 384, 'L', 12312, 0);
+						risc5sim->IssueCommand( 384, 'L', 12312, 0);
+						risc5sim->IssueCommand( 384, 'L', 12312, 0);
+						risc5sim->IssueCommand( 384, 'L', 12312, 0);
+						risc5sim->IssueCommand( 384, 'L', 12312, 0);
+						risc5sim->IssueCommand( 384, 'L', 12312, 0);
+						//risc5sim->IssueCommand( 0, 0, 'C', 11, 'Y');
 						command++;
 					}
 					else
@@ -90,7 +98,7 @@ int main()
 					std::cout << "the queue is full" << std::endl;
 				}
 
-				risc5sim->Cycle(200);
+				risc5sim->Cycle(100);
 			}
 		}
         std::cout << "All is done" << std::endl ;
@@ -216,6 +224,8 @@ void R5sim::SetConfig( int argc, char *argv[] )
 
     currentCycle = 0;
 	outstandingRequests = 0;
+
+	CommandQueueSize = 5;
 }
 
 uint64_t R5sim::getCycle()
@@ -228,6 +238,13 @@ void R5sim::Cycle( ncycle_t steps )
 	for ( uint64_t i=1 ; i <= steps ; i++ )
 		if ( outstandingRequests > 0 ) 
 		{
+			if( !CommandQueue.empty() )
+				if( IsIssuable(CommandQueue.front()))
+				{
+					//std::cout<<"i send a commmmmand" << std::endl;
+					GetChild( )->IssueCommand( CommandQueue.front() );
+					CommandQueue.pop_front();
+				}
 			//std::cout << " now it is " << currentCycle << std::endl;
 			globalEventQueue->Cycle( 1 );
 			currentCycle++;
@@ -235,6 +252,8 @@ void R5sim::Cycle( ncycle_t steps )
 		}
 		
 }
+
+
 bool R5sim::IsIssuable( uint64_t input_addr, uint64_t output_addr, char opt, uint64_t data, char slide)
 {
 	if ( opt == 'C')
@@ -259,15 +278,18 @@ bool R5sim::IsIssuable( uint64_t input_addr, uint64_t output_addr, char opt, uin
 	}
 }
 
+
 bool R5sim::IsIssuable( uint64_t addr, char opt, uint64_t data, uint64_t threadId = 0 )
 {
 //	NVMainRequest *request = new NVMainRequest;
 //	request = R5sim::linetocommand( addr, opt, data, threadId )
 	NVMainRequest *request = new NVMainRequest( );
+
 	/* translate traceline to command */
 	//uint64_t cycle = currentCycle;
 	
 	/* opt translator */
+
 	if ( opt == 'R' )
 		request->type = READ;
 	else if ( opt == 'W')
@@ -309,6 +331,16 @@ bool R5sim::IsIssuable( uint64_t addr, char opt, uint64_t data, uint64_t threadI
 bool R5sim::IsIssuable( NVMainRequest* request , FailReason * /*fail*/)
 {
 	return GetChild( request )->IsIssuable( request );
+}
+
+bool R5sim::IsIssuable( )
+{
+	if ( CommandQueue.size() < CommandQueueSize )
+		return true;
+	else
+	{
+		return false;
+	}
 }
 bool R5sim::IssueCommand( uint64_t input_addr, uint64_t output_addr, char opt, uint64_t data, char slide)
 {
@@ -384,7 +416,9 @@ bool R5sim::IssueCommand( uint64_t addr, char opt, uint64_t data, uint64_t threa
 bool R5sim::IssueCommand( NVMainRequest *request )
 {	
 	outstandingRequests++;
-	GetChild( )->IssueCommand( request );
+	//GetChild( )->IssueCommand( request );
+	if (IsIssuable( ))
+		CommandQueue.push_back( request );
 	return 1;
 }
 
