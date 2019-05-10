@@ -23,6 +23,7 @@ class R5sim : public NVMObject
     bool IsIssuable( NVMainRequest *request, FailReason * fail=NULL);
     bool IsIssuable( );
     bool IssueCommand( uint64_t input_addr, uint64_t output_addr, char opt, uint64_t data, char slide);
+    bool IssueCommand( uint64_t addr, char opt, uint64_t data, uint64_t threadId, char transfer_mode, uint64_t transfer_size);
   	bool IssueCommand( uint64_t addr, char opt, uint64_t data, uint64_t threadId );
   	bool IssueCommand( NVMainRequest * request );
     bool RequestComplete( NVMainRequest *request );

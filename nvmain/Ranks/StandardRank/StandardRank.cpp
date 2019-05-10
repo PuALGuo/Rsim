@@ -538,6 +538,50 @@ bool StandardRank::LoadWeight( NVMainRequest *request )
     return success;                 
 }
 
+bool StandardRank::Transfer( NVMainRequest *request )
+{
+    uint64_t readBank;
+    std::cout << "rec Transfer command in rank*****" << std::endl;
+    //addrgen.init();
+
+    request->address.GetTranslatedAddress( NULL, NULL, &readBank, NULL, NULL, NULL );
+
+    if( readBank >= bankCount )
+    {
+        std::cerr << "NVMain Error: Rank attempted to read non-existant bank: " 
+            << readBank << "!" << std::endl;
+        return false;
+    }
+
+    if( nextRead > GetEventQueue()->GetCurrentCycle() )
+    {
+        std::cerr << "NVMain Error: Rank Read violates the timing constraint: " 
+            << readBank << "!" << std::endl;
+        return false;
+    }
+
+    bool success = GetChild( request )->IssueCommand( request );
+
+    /*
+    nextRead = MAX( nextRead, 
+                    GetEventQueue()->GetCurrentCycle() 
+                    + MAX( p->tBURST, p->tCCD ) * (request->burstCount - 1)
+                    + p->tCWD + p->tBURST + p->tWTR );
+
+    nextWrite = MAX( nextWrite, 
+                     GetEventQueue()->GetCurrentCycle() 
+                     + MAX( p->tBURST, p->tCCD ) * request->burstCount );
+    */
+    
+    if( success == false )
+    {
+        std::cerr << "NVMain Error: Rank Write FAILED! Did you check IsIssuable?" 
+            << std::endl;
+    }
+    std::cout << "rec Transfer command in rank(complete)*****" << std::endl;
+    return success;                 
+}
+
 bool StandardRank::ReadCycle( NVMainRequest *request )
 {
     uint64_t readBank;
@@ -922,7 +966,7 @@ ncycle_t StandardRank::NextIssuable( NVMainRequest *request )
     else if( request->type == READ || request->type == READ_PRECHARGE ) nextCompare = nextRead;
     else if( request->type == WRITE || request->type == WRITE_PRECHARGE ) nextCompare = nextWrite;
     else if( request->type == PRECHARGE || request->type == PRECHARGE_ALL ) nextCompare = nextPrecharge;
-    else if( request->type == LOAD_WEIGHT ) nextCompare = MAX( nextRead, nextWrite );
+    else if( request->type == LOAD_WEIGHT || request->type == TRANSFER ) nextCompare = MAX( nextRead, nextWrite );
     else if( request->type == READCYCLE || request->type == REALCOMPUTE || request->type == POSTREAD || request->type == WRITECYCLE || request->type == COMPUTE ) nextCompare = MAX( nextRead, nextWrite );
     else assert(false);
         
@@ -1072,6 +1116,27 @@ bool StandardRank::IsIssuable( NVMainRequest *req, FailReason *reason )
             rv = GetChild( opBank + i )->IsIssuable( req, reason );
             if( rv == false )
                 return rv;
+        }
+    }
+    else if ( req->type == TRANSFER )
+    {
+        if( nextRead > GetEventQueue( )->GetCurrentCycle( ) )
+        {
+            rv = false;
+            std::cout << "*********read forbidding*******" << std::endl;
+            if ( reason )
+                reason->reason = RANK_TIMING;
+        }
+        else if ( nextWrite > GetEventQueue( )->GetCurrentCycle( ) )
+        {
+            rv = false;
+            std::cout << "********write forbidding******"  << std::endl;
+            if ( reason )
+                reason->reason = RANK_TIMING;
+        }
+        else
+        {
+            rv = GetChild( req )->IsIssuable( req, reason );
         }
     }
     else if ( req->type == LOAD_WEIGHT )
@@ -1261,6 +1326,10 @@ bool StandardRank::IssueCommand( NVMainRequest *req )
                 rv = this->LoadWeight( req );
                 break;
             
+            case TRANSFER:
+                rv = this->Transfer( req );
+                break;
+
             case READCYCLE:
                 rv = this->ReadCycle( req );
                 break;
@@ -1316,7 +1385,7 @@ void StandardRank::Notify( NVMainRequest *request )
         nextRead = MAX( nextRead, GetEventQueue()->GetCurrentCycle()
                                     + p->tBURST + p->tCWD + p->tRTRS - p->tCAS );
     }
-    else if ( op == LOAD_WEIGHT )
+    else if ( op == LOAD_WEIGHT || op == TRANSFER )
     /* it need to update */
     {
         nextWrite = MAX( nextWrite, GetEventQueue()->GetCurrentCycle() 

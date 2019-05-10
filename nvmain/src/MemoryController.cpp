@@ -317,8 +317,8 @@ bool MemoryController::RequestComplete( NVMainRequest *request )
          *  Any activate/precharge/etc commands belong to the memory controller
          *  and we are in charge of deleting them!
          */
-        if ( request->type == READCYCLE || request->type == REALCOMPUTE || request->type == POSTREAD || request->type == WRITECYCLE )
-            std::cout<< "im fine thank you " << std::endl;
+        //if ( request->type == READCYCLE || request->type == REALCOMPUTE || request->type == POSTREAD || request->type == WRITECYCLE )
+            //std::cout<< "im fine thank you " << std::endl;
         delete request;
     }
     else
@@ -918,6 +918,8 @@ NVMainRequest *MemoryController::MakeComputeRequest( NVMainRequest *triggerReque
     tmp->rowIntr = triggerRequest->rowIntr;
     tmp->slide = triggerRequest->slide;
     tmp->BufferSize = triggerRequest->BufferSize;
+    tmp->C_address1 = triggerRequest->C_address1;
+    tmp->C_address2 = triggerRequest->C_address2;
 
     return tmp;
 }
@@ -936,6 +938,8 @@ NVMainRequest *MemoryController::MakeReadCycleRequest( NVMainRequest *triggerReq
     rcRequest->rowIntr = triggerRequest->rowIntr;
     rcRequest->slide = triggerRequest->slide;
     rcRequest->BufferSize = triggerRequest->BufferSize;
+    rcRequest->C_address1 = triggerRequest->C_address1;
+    rcRequest->C_address2 = triggerRequest->C_address2;
 
     return rcRequest;
 }
@@ -955,6 +959,8 @@ NVMainRequest *MemoryController::MakeRealComputeRequest( NVMainRequest *triggerR
     cRequest->rowIntr = triggerRequest->rowIntr;
     cRequest->slide = triggerRequest->slide;
     cRequest->BufferSize = triggerRequest->BufferSize;
+    cRequest->C_address1 = triggerRequest->C_address1;
+    cRequest->C_address2 = triggerRequest->C_address2;
 
     return cRequest;    
 }
@@ -974,6 +980,8 @@ NVMainRequest *MemoryController::MakePostReadRequest( NVMainRequest *triggerRequ
     prRequest->rowIntr = triggerRequest->rowIntr;
     prRequest->slide = triggerRequest->slide;
     prRequest->BufferSize = triggerRequest->BufferSize;
+    prRequest->C_address1 = triggerRequest->C_address1;
+    prRequest->C_address2 = triggerRequest->C_address2;
 
     return prRequest;    
 }
@@ -994,6 +1002,8 @@ NVMainRequest *MemoryController::MakeWriteCycleRequest( NVMainRequest *triggerRe
     wcRequest->rowIntr = triggerRequest->rowIntr;
     wcRequest->slide = triggerRequest->slide;
     wcRequest->BufferSize = triggerRequest->BufferSize;
+    wcRequest->C_address1 = triggerRequest->C_address1;
+    wcRequest->C_address2 = triggerRequest->C_address2;
 
     return wcRequest;    
 }
@@ -1001,7 +1011,7 @@ NVMainRequest *MemoryController::MakeWriteCycleRequest( NVMainRequest *triggerRe
 NVMainRequest *MemoryController::MakeCachedRequest( NVMainRequest *triggerRequest )
 {
     /* This method should be called on *transaction* queue requests, thus only READ/WRITE possible. */
-    assert( triggerRequest->type == READ || triggerRequest->type == WRITE || triggerRequest->type == LOAD_WEIGHT || triggerRequest->type == COMPUTE);
+    assert( triggerRequest->type == READ || triggerRequest->type == WRITE || triggerRequest->type == LOAD_WEIGHT || triggerRequest->type == COMPUTE || triggerRequest->type == TRANSFER);
 
     NVMainRequest *cachedRequest = new NVMainRequest( );
 
@@ -1506,6 +1516,7 @@ bool MemoryController::FindOldestReadyRequest( std::list<NVMainRequest *>& trans
 
     return rv;
 }
+
 bool MemoryController::FindComputeRequest( std::list<NVMainRequest *>& transactionQueue, NVMainRequest **computeRequest )
 {
     bool rv = false;
@@ -1540,6 +1551,39 @@ bool MemoryController::FindComputeRequest( std::list<NVMainRequest *>& transacti
 
     return rv;
 }
+
+bool MemoryController::FindTransferRequest( std::list<NVMainRequest *>& transactionQueue, NVMainRequest **transferRequest )
+{
+    bool rv = false;
+    std::list<NVMainRequest *>::iterator it;
+
+    *transferRequest = NULL;
+    for( it = transactionQueue.begin();it != transactionQueue.end(); it++ )
+    {
+        ncounter_t rank, bank;
+        ncounter_t queueId = GetCommandQueueId( (*it)->address );
+
+        if( !commandQueues[queueId].empty() ) continue;
+
+        (*it)->address.GetTranslatedAddress( NULL, NULL, &bank, &rank, NULL, NULL );
+
+        if( commandQueues[queueId].empty()   /* The request queue is empty */
+            && (*it)->arrivalCycle != GetEventQueue()->GetCurrentCycle() )
+        {
+            *transferRequest = (*it);
+            transactionQueue.erase( it );
+
+            if( IsLastRequest( transactionQueue, (*transferRequest) ) )
+                (*transferRequest)->flags |= NVMainRequest::FLAG_LAST_REQUEST;
+
+            rv = true;
+            break;
+        }
+    }
+
+    return rv;
+}
+
 bool MemoryController::FindLoadRequest( std::list<NVMainRequest *>& transactionQueue, NVMainRequest **loadRequest )
 {
     bool rv = false;
@@ -1571,6 +1615,7 @@ bool MemoryController::FindLoadRequest( std::list<NVMainRequest *>& transactionQ
 
     return rv;
 }
+
 bool MemoryController::FindClosedBankRequest( std::list<NVMainRequest *>& transactionQueue, 
                                               NVMainRequest **closedRequest )
 {
@@ -1729,7 +1774,7 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
                 req->row = 1;
                 req->col = 1;
                 req->rowIntr = false;
-                req->slide = globalparams.slide;
+                //req->slide = globalparams.slide;
 
                 NVMainRequest *rcRequest = MakeReadCycleRequest( req );
                 //flags need setting ??
@@ -1779,8 +1824,10 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
         {
             req->Cycle_n = 0;
             req->Buffer_n = req->BufferSize;
+            req->row = 1;
+            req->col = 1;
             req->rowIntr = false;
-            req->slide = globalparams.slide;
+            //req->slide = globalparams.slide;
             
             NVMainRequest *rcRequest = MakeReadCycleRequest( req );
             //flags need setting ??
@@ -1853,7 +1900,7 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
                 req->Cycle_n = 0;
                 req->Buffer_n = req->BufferSize;
                 req->rowIntr = false;
-                req->slide = globalparams.slide;
+                //req->slide = globalparams.slide;
                 
                 NVMainRequest *rcRequest = MakeReadCycleRequest( req );
                 //flags need setting ??
@@ -2037,7 +2084,7 @@ void MemoryController::CycleCommandQueues( )
                         queueHead->row = queueHead->row + 1;
                         
                         ncounter_t rank, bank, row, subarray, col, channel;
-                        globalparams.Input_Addr.GetTranslatedAddress( &row, &col, &bank, &rank, &channel, &subarray );
+                        queueHead->C_address1.GetTranslatedAddress( &row, &col, &bank, &rank, &channel, &subarray );
                         col = col + (queueHead->row - 1)*globalparams.Input_Row;
                         while (col>=p->COLS)
                         {
@@ -2095,8 +2142,9 @@ void MemoryController::CycleCommandQueues( )
                         std::cout << "buffer_n is " << queueHead->Buffer_n << std::endl;
 
                         ncounter_t rank, bank, row, subarray, col, channel;
-                        globalparams.Input_Addr.GetTranslatedAddress( &row, &col, &bank, &rank, &channel, &subarray );
-                        col = col + (queueHead->row - 1)*globalparams.Input_Row + queueHead->col - 1;
+                        queueHead->C_address1.GetTranslatedAddress( &row, &col, &bank, &rank, &channel, &subarray );
+                        std::cout << " point is col " << queueHead->col << " row " << queueHead->row << std::endl;
+                        col = col + (queueHead->row - 1)*globalparams.Input_Col + queueHead->col - 1;
                         while (col >=p->COLS)
                         {
                             col = col - p->COLS;
@@ -2136,7 +2184,7 @@ void MemoryController::CycleCommandQueues( )
                         commandQueues[queueId].push_front(MakeComputeRequest( queueHead ));
 
                         ncounter_t rank, bank, row, subarray, col, channel;
-                        globalparams.Input_Addr.GetTranslatedAddress( &row, &col, &bank, &rank, &channel, &subarray );
+                        queueHead->C_address1.GetTranslatedAddress( &row, &col, &bank, &rank, &channel, &subarray );
                         col = col + (queueHead->row - 1)*globalparams.Input_Row + queueHead->col - 1;
                         while (col>=p->COLS)
                         {

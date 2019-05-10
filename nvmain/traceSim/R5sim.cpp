@@ -76,6 +76,7 @@ int main()
 					if(command < 1)
 					{
 						//std::cout << "I send a load command" << std::endl;
+						/*
 						risc5sim->IssueCommand( 384, 'L', 12312, 0);
 						risc5sim->IssueCommand( 384, 'L', 12312, 0);
 						risc5sim->IssueCommand( 384, 'L', 12312, 0);
@@ -85,7 +86,29 @@ int main()
 						risc5sim->IssueCommand( 384, 'L', 12312, 0);
 						risc5sim->IssueCommand( 384, 'L', 12312, 0);
 						risc5sim->IssueCommand( 384, 'L', 12312, 0);
+						*/
+						/*
+						risc5sim->IssueCommand( 0, 0, 'C', 11, 'Y');
+						risc5sim->IssueCommand( 0, 0, 'C', 11, 'X');
+						risc5sim->IssueCommand( 0, 0, 'C', 11, 'Y');
+						risc5sim->IssueCommand( 0, 0, 'C', 11, 'X');
+						risc5sim->IssueCommand( 0, 0, 'C', 11, 'Y');
+						risc5sim->IssueCommand( 0, 0, 'C', 11, 'X');
+						*/
+						/*
+						risc5sim->IssueCommand(333,'T', 123123, 0, 'I', 128 );
+						risc5sim->IssueCommand(333,'T', 123123, 0, 'I', 128 );
+						risc5sim->IssueCommand(333,'T', 123123, 0, 'O', 128 );
+						risc5sim->IssueCommand(333,'T', 123123, 0, 'O', 128 );
+						*/
+						risc5sim->IssueCommand( 333, 'T', 123123, 0, 'O', 128 );
+						//risc5sim->IssueCommand( 333, 'T', 0, 0, 'O', 128 ); // transfer 128 bit data
+						//risc5sim->IssueCommand( 333, 'T', 123123, 0, 'O', 128 );
+						//risc5sim->IssueCommand( 384, 'L', 12312, 0);
 						//risc5sim->IssueCommand( 0, 0, 'C', 11, 'Y');
+						risc5sim->IssueCommand( 0, 0, 'C', 11, 'X');
+						risc5sim->IssueCommand( 0, 0, 'C', 11, 'Y');
+						//risc5sim->IssueCommand( 384, 'L', 12312, 0);
 						command++;
 					}
 					else
@@ -98,7 +121,7 @@ int main()
 					std::cout << "the queue is full" << std::endl;
 				}
 
-				risc5sim->Cycle(100);
+				risc5sim->Cycle(1000000);
 			}
 		}
         std::cout << "All is done" << std::endl ;
@@ -258,12 +281,18 @@ bool R5sim::IsIssuable( uint64_t input_addr, uint64_t output_addr, char opt, uin
 {
 	if ( opt == 'C')
 	{
-		globalparams.Input_Addr.SetPhysicalAddress(input_addr);
-		globalparams.Output_Addr.SetPhysicalAddress(output_addr);
+		//globalparams.Input_Addr.SetPhysicalAddress(input_addr);
+		//globalparams.Output_Addr.SetPhysicalAddress(output_addr);
 		if( slide == 'X')
-			globalparams.slide=X;
+			//globalparams.slide=X;
+		{
+			std::cout << "output_addr" << output_addr << std::endl;
+		}
 		else if ( slide == 'Y' )
-			globalparams.slide=Y;
+			//globalparams.slide=Y;
+		{
+
+		}
 		else
 		{
 			std::cout << "wrong slide_mode " << std::endl;
@@ -344,27 +373,114 @@ bool R5sim::IsIssuable( )
 }
 bool R5sim::IssueCommand( uint64_t input_addr, uint64_t output_addr, char opt, uint64_t data, char slide)
 {
+	NVMainRequest *request = new NVMainRequest( );
+
 	if ( opt == 'C')
 	{
-		globalparams.Input_Addr.SetPhysicalAddress(input_addr);
-		globalparams.Output_Addr.SetPhysicalAddress(output_addr);
+		NVMAddress nAddress1;
+		nAddress1.SetPhysicalAddress( input_addr );
+		request->C_address1 = nAddress1;
+		NVMAddress nAddress2;
+		nAddress2.SetPhysicalAddress( output_addr );
+		request->C_address2 = nAddress2;
+		//globalparams.Input_Addr.SetPhysicalAddress(input_addr);
+		//globalparams.Output_Addr.SetPhysicalAddress(output_addr);
+		request->BufferSize = globalparams.Buffer_n;
+		request->type = COMPUTE;
 		if( slide == 'X')
-			globalparams.slide=X;
+		{
+			//globalparams.slide=X;
+			request->slide = X;
+		}
 		else if ( slide == 'Y' )
-			globalparams.slide=Y;
+		{
+			//globalparams.slide=Y;
+			request->slide = Y;
+		}
 		else
 		{
 			std::cout << "wrong slide_mode " << std::endl;
 			return false;
 		}
-		return IssueCommand(input_addr, opt, data, (uint64_t)0);
+		//return IssueCommand(input_addr, opt, data, (uint64_t)0);
 	}
 	else
 	{
 		std::cout<< "wrong command" <<std::endl;
 		return false;
 	}
+	
+	assert(sizeof(uint64_t)*8 == 64);
+	
+	NVMDataBlock dataBlock;
+    NVMDataBlock oldDataBlock;
+	dataBlock.SetSize( 64 );
+	for (int byte = 0; byte < 64; byte ++)
+	{
+		dataBlock.rawData[byte] = data % 256 ;
+		data = data / 256;
+	}
+
+	NVMAddress nAddress;
+	nAddress.SetPhysicalAddress( input_addr );
+	request->address = nAddress;
+	request->bulkCmd = CMD_NOP;
+	request->threadId = 0;
+	request->data = dataBlock;
+	request->oldData = oldDataBlock;
+	request->status = MEM_REQUEST_INCOMPLETE;
+	request->owner = (NVMObject *)this;
+	
+    return IssueCommand( request );	
 }
+bool R5sim::IssueCommand( uint64_t addr, char opt, uint64_t data, uint64_t threadId, char transfer_mode, uint64_t transfer_size )
+{
+	NVMainRequest *request = new NVMainRequest( );
+
+	if( opt== 'T')
+	{
+		request->type = TRANSFER;
+		request->t_size = transfer_size;
+		if( transfer_mode == 'I')
+			request->t_mode = Move_In;
+		else if( transfer_mode == 'O')
+			request->t_mode = Move_Out;
+		else
+		{
+			std::cout << "wrong transfer_mode " << std::endl;
+			return false;
+		}
+	}
+	else 
+	{
+		std::cout << "wrong command" << std::endl;
+		return false;
+	}
+
+	assert(sizeof(uint64_t)*8 == 64);
+	
+	NVMDataBlock dataBlock;
+    NVMDataBlock oldDataBlock;
+	dataBlock.SetSize( 64 );
+	for (int byte = 0; byte < 64; byte ++)
+	{
+		dataBlock.rawData[byte] = data % 256 ;
+		data = data / 256;
+	}
+	
+	NVMAddress nAddress;
+	nAddress.SetPhysicalAddress( addr );
+	request->address = nAddress;
+	request->bulkCmd = CMD_NOP;
+	request->threadId = threadId;
+	request->data = dataBlock;
+	request->oldData = oldDataBlock;
+	request->status = MEM_REQUEST_INCOMPLETE;
+	request->owner = (NVMObject *)this;
+	
+    return IssueCommand( request );	
+}
+
 bool R5sim::IssueCommand( uint64_t addr, char opt, uint64_t data, uint64_t threadId )
 {
 	NVMainRequest *request = new NVMainRequest( );
@@ -382,6 +498,10 @@ bool R5sim::IssueCommand( uint64_t addr, char opt, uint64_t data, uint64_t threa
 	{
 		request->BufferSize = globalparams.Buffer_n;
 		request->type = COMPUTE;
+	}
+	else if ( opt == 'T')
+	{
+		request->type = TRANSFER;
 	}
 	else 
 		std::cout << "Warning: Unknown operation '" << opt << "'" << std::endl;
@@ -435,6 +555,8 @@ bool R5sim::RequestComplete( NVMainRequest* request )
 		std::cout << "load from " << request->arrivalCycle << " to " << request->completionCycle << std::endl;
 	else if ( request->type == COMPUTE )
 		std::cout << "compute from " << request->arrivalCycle << " to " << request->completionCycle << std::endl;
+	else if ( request->type == TRANSFER )
+		std::cout << "transfer from " << request->arrivalCycle << " to " << request->completionCycle << std::endl;
 	for (int i = 0; i<64; i++)
     {
         std::cout << (int) request->data.rawData[i] << " ";
