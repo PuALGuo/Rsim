@@ -101,11 +101,13 @@ int main()
 						risc5sim->IssueCommand(333,'T', 123123, 0, 'O', 128 );
 						risc5sim->IssueCommand(333,'T', 123123, 0, 'O', 128 );
 						*/
-						risc5sim->IssueCommand( 333, 'T', 123123, 0, 'O', 128 );
+						//risc5sim->IssueCommand( 333, 'T', 123123, 0, 'O', 128 );
 						//risc5sim->IssueCommand( 333, 'T', 0, 0, 'O', 128 ); // transfer 128 bit data
 						//risc5sim->IssueCommand( 333, 'T', 123123, 0, 'O', 128 );
 						//risc5sim->IssueCommand( 384, 'L', 12312, 0);
 						//risc5sim->IssueCommand( 0, 0, 'C', 11, 'Y');
+						risc5sim->IssueCommand( 0, 0, 'C', 11, 'X');
+						risc5sim->IssueCommand( 0, 0, 'C', 11, 'Y');
 						risc5sim->IssueCommand( 0, 0, 'C', 11, 'X');
 						risc5sim->IssueCommand( 0, 0, 'C', 11, 'Y');
 						//risc5sim->IssueCommand( 384, 'L', 12312, 0);

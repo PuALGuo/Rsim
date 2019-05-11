@@ -940,6 +940,7 @@ NVMainRequest *MemoryController::MakeReadCycleRequest( NVMainRequest *triggerReq
     rcRequest->BufferSize = triggerRequest->BufferSize;
     rcRequest->C_address1 = triggerRequest->C_address1;
     rcRequest->C_address2 = triggerRequest->C_address2;
+    rcRequest->isReused = triggerRequest->isReused;
 
     return rcRequest;
 }
@@ -1774,6 +1775,7 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
                 req->row = 1;
                 req->col = 1;
                 req->rowIntr = false;
+                req->isReused = false;
                 //req->slide = globalparams.slide;
 
                 NVMainRequest *rcRequest = MakeReadCycleRequest( req );
@@ -1827,6 +1829,7 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
             req->row = 1;
             req->col = 1;
             req->rowIntr = false;
+            req->isReused = false;
             //req->slide = globalparams.slide;
             
             NVMainRequest *rcRequest = MakeReadCycleRequest( req );
@@ -1900,6 +1903,9 @@ bool MemoryController::IssueMemoryCommands( NVMainRequest *req )
                 req->Cycle_n = 0;
                 req->Buffer_n = req->BufferSize;
                 req->rowIntr = false;
+                req->row = 1;
+                req->col = 1;
+                req->isReused = false;
                 //req->slide = globalparams.slide;
                 
                 NVMainRequest *rcRequest = MakeReadCycleRequest( req );
@@ -2066,6 +2072,7 @@ void MemoryController::CycleCommandQueues( )
                             queueHead->rowIntr = false;
                         */
                         
+                        queueHead->isReused = true;
                         commandQueues[queueId].push_back(MakeActivateRequest( queueHead ));
                         commandQueues[queueId].push_back(MakeReadCycleRequest( queueHead ));
                         commandQueues[queueId].push_back(MakeRealComputeRequest( queueHead ));
@@ -2112,6 +2119,8 @@ void MemoryController::CycleCommandQueues( )
                         {
                             queueHead->RowComplete = true;
                         }
+                        
+                        queueHead->isReused = false;
                         commandQueues[queueId].push_back(MakeActivateRequest( queueHead ));
                         commandQueues[queueId].push_back(MakeReadCycleRequest( queueHead ));
                         commandQueues[queueId].push_back(MakeRealComputeRequest( queueHead ));
@@ -2163,6 +2172,7 @@ void MemoryController::CycleCommandQueues( )
                             queueHead->RowComplete = true;
                         }
                         
+                        queueHead->isReused = true;
                         commandQueues[queueId].push_back(MakeActivateRequest( queueHead ));
                         commandQueues[queueId].push_back(MakeReadCycleRequest( queueHead ));
                         commandQueues[queueId].push_back(MakeRealComputeRequest( queueHead ));
@@ -2207,6 +2217,7 @@ void MemoryController::CycleCommandQueues( )
                         queueHead->Buffer_n = queueHead->BufferSize;
                         std::cout << "buffer is " << queueHead->Buffer_n << std::endl;
 
+                        queueHead->isReused = false;
                         commandQueues[queueId].push_back(MakeActivateRequest( queueHead ));
                         commandQueues[queueId].push_back(MakeReadCycleRequest( queueHead ));
                         commandQueues[queueId].push_back(MakeRealComputeRequest( queueHead ));

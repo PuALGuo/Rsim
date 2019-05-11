@@ -187,6 +187,7 @@ class NVMainRequest
     bool ColComplete = false;
     Transfer_mode t_mode;
     uint64_t t_size;
+    bool isReused;
     
     ncycle_t arrivalCycle;         //< When the request arrived at the memory controller
     ncycle_t queueCycle;           //< When the memory controller accepted (queued) the request

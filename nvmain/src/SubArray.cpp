@@ -871,8 +871,25 @@ bool SubArray::ReadCycle( NVMainRequest *request)
 
     /* Update timing constraints */
     ncycles_t Timer ;
-    Timer = p->tCAS+p->tBURST*(request->BufferSize/2+globalparams.K_Col - 1);
-    Timer = (Timer + p->tRP)*globalparams.K_Row* ceil( globalparams.K_Channel/4.0 ); //four bank is parallel
+    if (request->isReused)
+    {
+        if (request->slide == X)
+        {
+            Timer = p->tCAS+p->tBURST*(request->BufferSize/2);
+            Timer = (Timer + p->tRP)*globalparams.K_Row* ceil( globalparams.K_Channel/4.0 ); //four bank is parallel
+        }
+        else if (request->slide == Y)
+        {
+            Timer = p->tCAS+p->tBURST*(request->BufferSize/2+globalparams.K_Col - 1);
+            Timer = (Timer + p->tRP)*1* ceil( globalparams.K_Channel/4.0 ); //four bank is parallel
+        }
+    }
+    else
+    {
+        Timer = p->tCAS+p->tBURST*(request->BufferSize/2+globalparams.K_Col - 1);
+        Timer = (Timer + p->tRP)*globalparams.K_Row* ceil( globalparams.K_Channel/4.0 ); //four bank is parallel
+    }
+
 
     nextActivate = MAX( nextActivate, GetEventQueue()->GetCurrentCycle() + Timer + decLat);
     nextCompute = MAX( nextActivate, GetEventQueue()->GetCurrentCycle() + Timer + decLat);

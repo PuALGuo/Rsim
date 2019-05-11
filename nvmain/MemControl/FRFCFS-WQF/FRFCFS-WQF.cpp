@@ -63,7 +63,7 @@ FRFCFS_WQF::FRFCFS_WQF( ) : readQueueId(0), writeQueueId(1), computeQueueId(2)
     readQueueSize = 32;
     writeQueueSize = 8;
     //loadQueueSize = 1;
-    computeQueueSize = 4;
+    computeQueueSize = 2;
     //transferQueueSize = 1;
 
     starvationThreshold = 4;
